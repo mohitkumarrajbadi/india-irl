@@ -30,12 +30,13 @@ export function Traffic({ city }: { city: CityData }) {
     const tints = [[0xffffff], BIKE_TINTS, CAR_TINTS, [busTint], TRUCK_TINTS];
     // City seed → same fleet tint/spawn choices across clients.
     const sim = new TrafficSim(city, counts, tints, city.config.seed);
+    // Traffic always carries drivers/riders — empty shells look unnatural.
     const models: Model[] = [
-      buildAuto(city.config.livery.auto),
-      buildBike(),
-      buildCar(null),
-      buildBus(),
-      buildTruck(),
+      buildAuto(city.config.livery.auto, { occupied: true }),
+      buildBike({ occupied: true }),
+      buildCar(null, { occupied: true }),
+      buildBus({ occupied: true }),
+      buildTruck({ occupied: true }),
     ];
     const meshes = models.map((model, k) => {
       const body = new THREE.InstancedMesh(model.body, vertexMat, counts[k]);

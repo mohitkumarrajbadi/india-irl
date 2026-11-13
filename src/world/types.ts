@@ -91,6 +91,10 @@ export type CityConfig = {
   billboards: string[];
   skyline: SkyPalette;
   cows: number;
+  /** Stray street dogs per city. */
+  dogs: number;
+  /** Market / old-city goats per city. */
+  goats: number;
   /** Default start-up hour in IST when time is not synced to the clock. */
   startHour: number;
 };
@@ -128,6 +132,8 @@ export type Block = Rect & {
   bj: number;
   kind: DistrictKind | "landmark" | "lake";
   district: number;
+  /** Irregular green fringe — no buildings, softens the square city silhouette. */
+  fringe?: boolean;
 };
 
 export type RoadLine = {
@@ -163,6 +169,8 @@ export type CityData = {
   /** City-flavoured street extras. `v` is ExtraKind. */
   extras: Prop[];
   cows: Prop[];
+  /** Stray animals. `kind`: 0 dog, 1 goat. `v` is tint index. */
+  strays: (Prop & { kind: 0 | 1 })[];
   parked: (Prop & { kind: 0 | 1 })[];
   metroPillars: { x: number; z: number }[];
   /** Station platforms along the line. */

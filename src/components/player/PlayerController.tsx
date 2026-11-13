@@ -7,7 +7,7 @@ import { Actor, type ActorFrame } from "@/avatar/actor";
 import type { Look } from "@/avatar/appearance";
 import { EMOTES } from "@/avatar/rig";
 import { cycleTimePreset, env } from "@/gfx/env";
-import { emoteCue, footstep, hitCue, honk, setAmbient, setEngine, tickDistantTraffic, unlockAudio } from "@/game/audio";
+import { crashCue, emoteCue, footstep, hitCue, honk, setAmbient, setEngine, tickDistantTraffic, unlockAudio, wastedCue } from "@/game/audio";
 import { touchInput } from "@/game/input";
 import {
   atDrop,
@@ -19,6 +19,17 @@ import {
   jobTitle,
   useJob,
 } from "@/game/jobs";
+import {
+  bounceSpeed,
+  crashDamage,
+  crashSeverity,
+  isFatalCrash,
+  reportCrash,
+  shouldEjectBike,
+  tumbleRoll,
+  wallCrashSeverity,
+  WASTED,
+} from "@/game/crash";
 import {
   approachSpeed,
   COMBAT,
@@ -34,6 +45,18 @@ import { sendIntervalSec } from "@/net/interest";
 import { samplePeer } from "@/net/interp";
 import { sendHit, sendHonk, sendState, useNet, type Peer } from "@/net/store";
 import { voice } from "@/net/voice";
+import {
+  driveAuthorityEnter,
+  driveAuthorityExit,
+  driveAuthorityStep,
+  driveAuthorityUsesWorldColliders,
+} from "@/game/sim/drive-authority";
+import { takeDriveImpact } from "@/game/sim/drive-impact";
+import {
+  footAuthorityStep,
+  footAuthoritySync,
+  footAuthorityUsesWorldColliders,
+} from "@/game/sim/foot-authority";
 import { SPECS, seatWorld, stepDrive, type DriveState, type VehicleKind } from "@/vehicles/specs";
 import { KIND_INFO } from "@/vehicles/traffic";
 import { districtNameAt } from "@/world/generate";
@@ -112,6 +135,12 @@ export function PlayerController({ city, name, look }: Props) {
     stunUntil: 0,
     fightCd: 0,
     hp: 100,
+    crashCd: 0,
+    lastCrashToast: 0,
+    /** >0 while WASTED freeze is active (performance.now deadline). */
+    wastedUntil: 0,
+    /** Camera shake amplitude — decays each frame, no allocations. */
+    shake: 0,
   }).current;
 
   useEffect(
@@ -138,6 +167,9 @@ export function PlayerController({ city, name, look }: Props) {
     honkNow: () => {},
     emote: (_id: number) => {},
     strike: (_k: 0 | 1) => {},
+    ejectCrash: (_severity: number, _nx: number, _nz: number) => {},
+    triggerWasted: (_reason?: string) => {},
+    applyCrashHit: (_sev: number, _nx: number, _nz: number, _speed: number) => false as boolean,
   });
 
   useEffect(() => {
@@ -181,10 +213,120 @@ export function PlayerController({ city, name, look }: Props) {
       s.speed = 0;
       s.y = 0;
       s.vy = 0;
+      driveAuthorityExit({ x: s.x, y: s.y, z: s.z, yaw: s.facing });
       setEngine(0, 0);
     };
 
+    /** Hard crash throw — scooter riders get yeeted; leave wreck parked. */
+    const ejectCrash = (severity: number, nx: number, nz: number) => {
+      if (s.mode !== "drive") return;
+      const yaw = s.ds.yaw;
+      const sin = Math.sin(yaw);
+      const cos = Math.cos(yaw);
+      s.parked = {
+        x: s.ds.x,
+        z: s.ds.z,
+        yaw,
+        kind: s.kind as 1 | 2 | 3,
+        until: performance.now() + 45_000,
+      };
+      const throwDir = Math.hypot(nx, nz) > 1e-4 ? { x: nx, z: nz } : { x: cos, z: -sin };
+      const inv = 1 / (Math.hypot(throwDir.x, throwDir.z) || 1);
+      s.x = s.ds.x + throwDir.x * inv * 1.2;
+      s.z = s.ds.z + throwDir.z * inv * 1.2;
+      const g = grid();
+      if (g) {
+        g.resolve(s.x, s.z, PLAYER_RADIUS, out);
+        s.x = out.x;
+        s.z = out.z;
+      }
+      const force = 6 + severity * 14;
+      s.kb.x = throwDir.x * inv * force;
+      s.kb.z = throwDir.z * inv * force;
+      s.vy = 3.2 + severity * 4.5;
+      s.y = 0.35;
+      s.facing = yaw;
+      s.mode = "foot";
+      s.kind = 0;
+      s.rideWith = null;
+      s.speed = 0;
+      s.ds.speed = 0;
+      s.stunUntil = performance.now() + 400 + severity * 500;
+      driveAuthorityExit({ x: s.x, y: s.y, z: s.z, yaw: s.facing });
+      setEngine(0, 0);
+      hitCue(1.4);
+      crashCue(1.1 + severity * 0.4);
+    };
+
+    /** Enter WASTED — freeze, overlay, then respawn. Idempotent. */
+    const triggerWasted = () => {
+      if (s.wastedUntil > 0) return;
+      const now = performance.now();
+      if (s.mode === "drive") {
+        s.parked = {
+          x: s.ds.x,
+          z: s.ds.z,
+          yaw: s.ds.yaw,
+          kind: s.kind as 1 | 2 | 3,
+          until: now + 45_000,
+        };
+        s.mode = "foot";
+        s.kind = 0;
+        s.ds.speed = 0;
+        driveAuthorityExit({ x: s.x, y: 0, z: s.z, yaw: s.facing });
+      } else if (s.mode === "passenger") {
+        s.mode = "foot";
+        s.kind = 0;
+        s.rideWith = null;
+      }
+      s.speed = 0;
+      s.kb.x = 0;
+      s.kb.z = 0;
+      s.vy = 0;
+      s.y = 0;
+      s.hp = 0;
+      s.shake = Math.max(s.shake, 0.9);
+      s.stunUntil = now + WASTED.holdMs;
+      s.wastedUntil = now + WASTED.holdMs;
+      setEngine(0, 0);
+      wastedCue();
+      useGame.setState({ wasted: true });
+    };
+
+    /**
+     * Shared vehicle impact: damage, bounce, tumble, optional eject / WASTED.
+     * @returns true if player left the vehicle or wasted (stop further collision work).
+     */
+    const applyCrashHit = (sev: number, nx: number, nz: number, speedBefore: number): boolean => {
+      if (sev < 0.2 || s.mode !== "drive") return false;
+      const dmg = crashDamage(sev);
+      if (dmg > 0) s.hp = Math.max(0, s.hp - dmg);
+      s.shake = Math.min(1.35, s.shake + 0.25 + sev * 0.9);
+      s.ds.roll += tumbleRoll(sev, Math.random());
+      s.ds.speed = bounceSpeed(speedBefore, sev);
+      crashCue(0.7 + sev);
+      reportCrash(s.ds.x, s.ds.z, sev, shouldEjectBike(sev, s.kind));
+      const fatal = isFatalCrash(sev, speedBefore) || s.hp <= 0;
+      if (shouldEjectBike(sev, s.kind) && !fatal) {
+        ejectCrash(sev, nx, nz);
+        if (s.hp <= 0) triggerWasted();
+        return true;
+      }
+      // Hard car/auto smash — tumble out then maybe waste.
+      if (sev >= 0.78 && s.kind !== 2) {
+        ejectCrash(sev * 0.85, nx, nz);
+        if (fatal || s.hp <= 0) triggerWasted();
+        return true;
+      }
+      if (fatal) {
+        triggerWasted();
+        return true;
+      }
+      return false;
+    };
+
     const summon = (kind: 1 | 2 | 3) => {
+      if (s.wastedUntil > 0) return;
       const spec = SPECS[kind];
       if (s.mode === "passenger") dismount();
       if (s.mode === "foot") {
@@ -206,6 +348,7 @@ export function PlayerController({ city, name, look }: Props) {
       s.emote = 0;
       unlockAudio();
       setEngine(kind, 0);
+      driveAuthorityEnter(kind, { x: s.ds.x, z: s.ds.z, yaw: s.ds.yaw });
       toast(`${spec.name} booked. ${spec.blurb}`);
       grantMission("ride");
     };
@@ -246,12 +389,14 @@ export function PlayerController({ city, name, look }: Props) {
       s.parked = null;
       unlockAudio();
       setEngine(p.kind, 0);
+      driveAuthorityEnter(p.kind, { x: s.ds.x, z: s.ds.z, yaw: s.ds.yaw });
       toast(`Back in your ${SPECS[p.kind].name}`);
       return true;
     };
 
     /** GTA-style F: exit, hop into peer ride, remount parked, or summon last. */
     const vehicle = () => {
+      if (s.wastedUntil > 0) return;
       if (s.mode !== "foot") {
         dismount();
         return;
@@ -397,7 +542,7 @@ export function PlayerController({ city, name, look }: Props) {
       }
     };
     const strike = (kind: 0 | 1) => {
-      if (s.mode !== "foot") return;
+      if (s.mode !== "foot" || s.wastedUntil > 0) return;
       const now = performance.now();
       if (now < s.stunUntil || now < s.fightCd) return;
       unlockAudio();
@@ -426,11 +571,46 @@ export function PlayerController({ city, name, look }: Props) {
       if (hitId) {
         sendHit(hitId, kind);
         toast(`${kind === 1 ? "Kick" : "Punch"} · ${hitName}`);
-      } else {
-        toast(kind === 1 ? "Kick" : "Punch");
+        // Crowd reacts to street fights.
+        const pedSim = runtime.peds;
+        if (pedSim) {
+          for (const ped of pedSim.peds) {
+            const d2 = (ped.x - s.x) ** 2 + (ped.z - s.z) ** 2;
+            if (d2 < 10 * 10) {
+              pedSim.reactToHit(ped, s.x, s.z, now);
+              break;
+            }
+          }
+        }
+        return;
       }
+      // Hit sidewalk NPCs — some flee, some fight back.
+      const pedSim = runtime.peds;
+      if (pedSim) {
+        let bestPed = null as null | (typeof pedSim.peds)[number];
+        let bestPedD = range * range;
+        for (const ped of pedSim.peds) {
+          if (!inStrikeCone(s.x, s.z, s.facing, ped.x, ped.z, range, cone)) continue;
+          const d2 = (ped.x - s.x) ** 2 + (ped.z - s.z) ** 2;
+          if (d2 < bestPedD) {
+            bestPedD = d2;
+            bestPed = ped;
+          }
+        }
+        if (bestPed) {
+          const reaction = pedSim.reactToHit(bestPed, s.x, s.z, now);
+          hitCue(kind === 1 ? 1.1 : 0.9);
+          if (reaction === "fight") {
+            toast(kind === 1 ? "Kick — they swung back!" : "Punch — street fight!");
+          } else {
+            toast(kind === 1 ? "Kick — they bolted" : "Punch — crowd scatters");
+          }
+          return;
+        }
+      }
+      toast(kind === 1 ? "Kick" : "Punch");
     };
-    cmds.current = { interact, vehicle, jobAction, summon, honkNow, emote, strike };
+    cmds.current = { interact, vehicle, jobAction, summon, honkNow, emote, strike, ejectCrash, triggerWasted, applyCrashHit };
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (typing(e.target)) return;
@@ -606,85 +786,177 @@ export function PlayerController({ city, name, look }: Props) {
         s.stunUntil = now + COMBAT.stun * 1000;
         s.hp = Math.max(0, s.hp - dmg);
         hitCue(h.kind === 1 ? 1.2 : 1);
+        s.shake = Math.min(1.2, s.shake + 0.35);
         toast(h.kind === 1 ? "Got kicked!" : "Got punched!");
-        if (s.hp <= 0) {
-          s.hp = 100;
-          toast("Down — but you’re back up. Rematch?");
-        }
+        if (s.hp <= 0) cmds.current.triggerWasted();
       }
     }
-    // Soft HP regen out of combat.
-    if (s.hp < 100 && now > s.stunUntil + 2500) s.hp = Math.min(100, s.hp + 8 * dt);
+    // Soft HP regen out of combat (not while WASTED).
+    if (s.wastedUntil <= 0 && s.hp < 100 && now > s.stunUntil + 2500) s.hp = Math.min(100, s.hp + 8 * dt);
     live.hp = s.hp;
+
+    // Pedestrian counters — street fights cut both ways.
+    if (s.mode === "foot" && s.wastedUntil <= 0 && now > s.stunUntil) {
+      const pedSim = runtime.peds;
+      if (pedSim?.tryCounter(s.x, s.z, now)) {
+        const fx = Math.sin(s.facing);
+        const fz = Math.cos(s.facing);
+        s.kb.x -= fx * COMBAT.punchForce * 0.85;
+        s.kb.z -= fz * COMBAT.punchForce * 0.85;
+        s.vy = Math.max(s.vy, 1.4);
+        s.stunUntil = now + COMBAT.stun * 900;
+        s.hp = Math.max(0, s.hp - COMBAT.punchDamage * 0.7);
+        hitCue(1);
+        s.shake = Math.min(1.2, s.shake + 0.4);
+        if (now - s.lastCrashToast > 1200) {
+          s.lastCrashToast = now;
+          toast("Crowd fought back!");
+        }
+        if (s.hp <= 0) cmds.current.triggerWasted();
+      }
+    }
 
     // Clear short fight poses.
     if ((s.emote === 5 || s.emote === 6) && now - s.emoteStart > COMBAT.emoteHold * 1000) s.emote = 0;
 
-    // ---- simulate ----
-    if (s.mode === "foot") {
+    // ---- WASTED: freeze movement, then respawn at city spawn ----
+    if (s.wastedUntil > 0) {
+      s.speed = 0;
+      s.ds.speed = 0;
+      s.kb.x = 0;
+      s.kb.z = 0;
+      s.vy = 0;
+      s.y = 0;
+      if (now >= s.wastedUntil) {
+        s.wastedUntil = 0;
+        s.hp = 100;
+        s.x = city.spawn.x;
+        s.z = city.spawn.z;
+        s.facing = city.spawn.yaw;
+        s.camYaw = city.spawn.yaw;
+        s.camPitch = 0.34;
+        s.shake = 0;
+        s.stunUntil = 0;
+        s.mode = "foot";
+        s.kind = 0;
+        s.rideWith = null;
+        s.emote = 0;
+        footAuthoritySync({ x: s.x, y: 0, z: s.z, yaw: s.facing });
+        useGame.setState({ wasted: false });
+        live.hp = 100;
+        toast("Back on the street");
+      } else {
+        // Drift camera down toward the body — cheap Vice City vibe.
+        s.camPitch = damp(s.camPitch, 0.72, 1.8, dt);
+        s.shake *= Math.exp(-3.5 * dt);
+      }
+      // Fall through to camera / actor / HUD below — skip locomotion.
+    } else if (s.mode === "foot") {
       const stunned = now < s.stunUntil;
-      const mag = Math.hypot(forward, strafe);
-      const moving = mag > 0.04 && !stunned;
-      if (moving && s.emote !== 0 && s.emote < 5) s.emote = 0;
-      const pace = Math.min(1, mag);
-      const grounded = s.y <= 0.001;
-      if (grounded) s.coyote = FOOT.coyote;
-      else s.coyote = Math.max(0, s.coyote - dt);
-      const target = moving ? (sprint ? FOOT.sprint : FOOT.walk) * pace : 0;
-      const airMul = grounded ? 1 : FOOT.airControl;
-      s.speed = approachSpeed(s.speed, target * airMul, dt, moving && grounded);
-      if (moving) {
-        const inv = 1 / mag;
-        const sin = Math.sin(s.camYaw);
-        const cos = Math.cos(s.camYaw);
-        s.dir.set(forward * inv * sin - strafe * inv * cos, 0, forward * inv * cos + strafe * inv * sin);
-      }
-      const px = s.x;
-      const pz = s.z;
-      const kb = integrateKnockback(s.kb, dt);
-      let nx = px + s.dir.x * s.speed * dt + kb.dx;
-      let nz = pz + s.dir.z * s.speed * dt + kb.dz;
-      if (grid) {
-        grid.resolve(nx, nz, PLAYER_RADIUS, out);
-        nx = out.x;
-        nz = out.z;
-      }
-      const sim = runtime.traffic;
-      if (sim) {
-        for (const a of sim.agents) {
-          const info = KIND_INFO[a.kind];
-          const r = (info.len + info.wid) * 0.25 + PLAYER_RADIUS;
-          const dx = nx - a.x;
-          const dz = nz - a.z;
-          const d2 = dx * dx + dz * dz;
-          if (d2 < r * r && d2 > 1e-6) {
-            const d = Math.sqrt(d2);
-            nx = a.x + (dx / d) * r;
-            nz = a.z + (dz / d) * r;
-            s.speed *= 0.88;
+      const usedSimFoot = footAuthorityStep(s, {
+        forward,
+        strafe,
+        camYaw: s.camYaw,
+        facing: s.facing,
+        sprint,
+        jump,
+        stunned,
+      }, dt);
+      if (!usedSimFoot) {
+        const mag = Math.hypot(forward, strafe);
+        const moving = mag > 0.04 && !stunned;
+        if (moving && s.emote !== 0 && s.emote < 5) s.emote = 0;
+        const pace = Math.min(1, mag);
+        const grounded = s.y <= 0.001;
+        if (grounded) s.coyote = FOOT.coyote;
+        else s.coyote = Math.max(0, s.coyote - dt);
+        const target = moving ? (sprint ? FOOT.sprint : FOOT.walk) * pace : 0;
+        const airMul = grounded ? 1 : FOOT.airControl;
+        s.speed = approachSpeed(s.speed, target * airMul, dt, moving && grounded);
+        if (moving) {
+          const inv = 1 / mag;
+          const sin = Math.sin(s.camYaw);
+          const cos = Math.cos(s.camYaw);
+          s.dir.set(forward * inv * sin - strafe * inv * cos, 0, forward * inv * cos + strafe * inv * sin);
+        }
+        const px = s.x;
+        const pz = s.z;
+        const kb = integrateKnockback(s.kb, dt);
+        let nx = px + s.dir.x * s.speed * dt + kb.dx;
+        let nz = pz + s.dir.z * s.speed * dt + kb.dz;
+        if (grid) {
+          grid.resolve(nx, nz, PLAYER_RADIUS, out);
+          nx = out.x;
+          nz = out.z;
+        }
+        const sim = runtime.traffic;
+        if (sim) {
+          for (const a of sim.agents) {
+            const info = KIND_INFO[a.kind];
+            const r = (info.len + info.wid) * 0.25 + PLAYER_RADIUS;
+            const dx = nx - a.x;
+            const dz = nz - a.z;
+            const d2 = dx * dx + dz * dz;
+            if (d2 < r * r && d2 > 1e-6) {
+              const d = Math.sqrt(d2);
+              nx = a.x + (dx / d) * r;
+              nz = a.z + (dz / d) * r;
+              s.speed *= 0.88;
+            }
           }
         }
-      }
-      s.x = nx;
-      s.z = nz;
-      s.actual = dt > 0 ? Math.hypot(s.x - px, s.z - pz) / dt : 0;
-      if (jump && !stunned && (grounded || s.coyote > 0) && s.vy <= 0.05) {
-        s.vy = FOOT.jump;
-        s.coyote = 0;
-      }
-      if (s.vy !== 0 || s.y > 0) {
-        s.vy -= FOOT.gravity * dt;
-        const prevY = s.y;
-        s.y = Math.max(0, s.y + s.vy * dt);
-        if (s.y === 0) {
-          if (prevY > 0.15 && s.vy < -4) s.speed *= 0.72; // landing impact
-          s.vy = 0;
+        s.x = nx;
+        s.z = nz;
+        s.actual = dt > 0 ? Math.hypot(s.x - px, s.z - pz) / dt : 0;
+        if (jump && !stunned && (grounded || s.coyote > 0) && s.vy <= 0.05) {
+          s.vy = FOOT.jump;
+          s.coyote = 0;
         }
+        if (s.vy !== 0 || s.y > 0) {
+          s.vy -= FOOT.gravity * dt;
+          const prevY = s.y;
+          s.y = Math.max(0, s.y + s.vy * dt);
+          if (s.y === 0) {
+            if (prevY > 0.15 && s.vy < -4) s.speed *= 0.72;
+            s.vy = 0;
+          }
+        }
+        if (s.actual > 0.2 && !stunned) s.facing = dampAngle(s.facing, Math.atan2(s.dir.x, s.dir.z), 12, dt);
+      } else if (s.emote !== 0 && s.emote < 5 && Math.hypot(forward, strafe) > 0.04) {
+        s.emote = 0;
       }
-      if (s.actual > 0.2 && !stunned) s.facing = dampAngle(s.facing, Math.atan2(s.dir.x, s.dir.z), 12, dt);
+      // Soft traffic push still applies on sim foot (NPC fleet is arcade).
+      if (usedSimFoot && !footAuthorityUsesWorldColliders() && grid) {
+        grid.resolve(s.x, s.z, PLAYER_RADIUS, out);
+        s.x = out.x;
+        s.z = out.z;
+      }
     } else if (s.mode === "drive") {
       const spec = SPECS[s.kind as 1 | 2 | 3];
-      stepDrive(s.ds, { throttle: clamp(forward, -1, 1), steer: clamp(strafe, -1, 1), boost: sprint, handbrake: jump }, spec, dt);
+      const usedRapier = driveAuthorityStep(s.ds, s.kind, {
+        forward,
+        strafe,
+        yaw: s.ds.yaw,
+        sprint,
+        jump,
+        speed: s.ds.speed,
+      });
+      if (!usedRapier) {
+        stepDrive(
+          s.ds,
+          { throttle: clamp(forward, -1, 1), steer: clamp(strafe, -1, 1), boost: sprint, handbrake: jump },
+          spec,
+          dt,
+        );
+      }
+      const rapierHit = usedRapier ? takeDriveImpact() : null;
+      if (rapierHit && now > s.crashCd) {
+        const sev = wallCrashSeverity(0.4 + Math.min(2, Math.abs(rapierHit.speed) * 0.08), rapierHit.speed);
+        if (sev > 0.35) {
+          s.crashCd = now + 850;
+          cmds.current.applyCrashHit(sev, rapierHit.fx || Math.sin(s.ds.yaw), rapierHit.fz || Math.cos(s.ds.yaw), rapierHit.speed);
+        }
+      }
       // Speed breakers (extra v=7) — bump + slow like real Indian arterials.
       for (const e of city.extras) {
         if (e.v !== 7) continue;
@@ -695,21 +967,30 @@ export function PlayerController({ city, name, look }: Props) {
           break;
         }
       }
-      if (grid) {
+      if (grid && !(usedRapier && driveAuthorityUsesWorldColliders())) {
         const bx = s.ds.x;
         const bz = s.ds.z;
+        const spd0 = s.ds.speed;
         grid.resolve(bx, bz, spec.radius, out);
         const pushed = Math.hypot(out.x - bx, out.z - bz);
         if (pushed > 1e-4) {
+          const nx = out.x - bx;
+          const nz = out.z - bz;
           s.ds.x = out.x;
           s.ds.z = out.z;
-          // Harder wall response — lose momentum with impact feel.
-          const impact = clamp(pushed * 6 + Math.abs(s.ds.speed) * 0.04, 0, 0.72);
-          s.ds.speed *= 1 - impact;
+          const sev = wallCrashSeverity(pushed, spd0);
+          if (sev > 0.35 && now > s.crashCd) {
+            s.crashCd = now + 850;
+            if (cmds.current.applyCrashHit(sev, nx || Math.sin(s.ds.yaw), nz || Math.cos(s.ds.yaw), spd0)) {
+              /* ejected / wasted */
+            }
+          } else {
+            s.ds.speed *= 1 - clamp(pushed * 6 + Math.abs(spd0) * 0.04, 0, 0.78);
+          }
         }
       }
       const sim = runtime.traffic;
-      if (sim) {
+      if (sim && s.mode === "drive") {
         const mine = (spec.length + spec.width) * 0.25;
         for (const a of sim.agents) {
           const info = KIND_INFO[a.kind];
@@ -720,18 +1001,37 @@ export function PlayerController({ city, name, look }: Props) {
           if (d2 < r * r && d2 > 1e-6) {
             const d = Math.sqrt(d2);
             const overlap = r - d;
-            s.ds.x += (dx / d) * overlap;
-            s.ds.z += (dz / d) * overlap;
-            const closing = Math.abs(s.ds.speed) + Math.abs(a.speed);
-            s.ds.speed *= 1 - clamp(0.12 + closing * 0.012, 0.12, 0.55);
-            a.speed *= 0.65;
+            const nx = dx / d;
+            const nz = dz / d;
+            const spd0 = s.ds.speed;
+            // Separate bodies.
+            s.ds.x += nx * overlap * 0.55;
+            s.ds.z += nz * overlap * 0.55;
+            a.x -= nx * overlap * 1.15;
+            a.z -= nz * overlap * 1.15;
+            const closing = Math.abs(spd0) + Math.abs(a.speed);
+            const sev = crashSeverity(closing);
+            // Fling traffic (cheap Vice City smash).
+            a.speed *= 0.28 + (1 - sev) * 0.35;
+            a.yaw += (Math.random() - 0.5) * sev * 1.6;
+            a.x -= nx * sev * (2.2 + sev * 3);
+            a.z -= nz * sev * (2.2 + sev * 3);
+            a.ghost = Math.max(a.ghost, 0.7 + sev * 1.6);
+            if (sev > 0.28 && now > s.crashCd) {
+              s.crashCd = now + 650;
+              if (cmds.current.applyCrashHit(sev, nx, nz, spd0)) break;
+            } else {
+              s.ds.speed *= 1 - clamp(0.12 + closing * 0.012, 0.12, 0.55);
+            }
           }
         }
       }
-      s.x = s.ds.x;
-      s.z = s.ds.z;
-      s.actual = Math.abs(s.ds.speed);
-    } else {
+      if (s.mode === "drive") {
+        s.x = s.ds.x;
+        s.z = s.ds.z;
+        s.actual = Math.abs(s.ds.speed);
+      }
+    } else if (s.mode === "passenger") {
       const driver = s.rideWith ? peerMap.get(s.rideWith) : undefined;
       if (!driver || driver.veh === 0 || driver.passenger || driver.snaps.length === 0) {
         // The driver left. Step off where we are.
@@ -784,6 +1084,14 @@ export function PlayerController({ city, name, look }: Props) {
     }
     camera.position.set(fx + dirX * dist, Math.max(0.35, focusY + dist * sinP), fz + dirZ * dist);
     camera.lookAt(fx, focusY, fz);
+    // Screen shake — 2 float ops, no objects (Vice City impact punch).
+    if (s.shake > 0.02) {
+      const sh = s.shake;
+      camera.position.x += (Math.random() - 0.5) * sh * 0.42;
+      camera.position.y += (Math.random() - 0.5) * sh * 0.28;
+      camera.position.z += (Math.random() - 0.5) * sh * 0.42;
+      if (s.wastedUntil <= 0) s.shake *= Math.exp(-7 * dt);
+    } else s.shake = 0;
 
     const persp = camera as THREE.PerspectiveCamera;
     const wantFov = 58 + (vehicular ? clamp(s.actual * 0.38, 0, 10) : sprint && s.actual > 5 ? 3 : 0);

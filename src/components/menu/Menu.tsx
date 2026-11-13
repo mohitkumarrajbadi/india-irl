@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import * as THREE from "three";
 import {
   ACCESSORIES,
@@ -25,7 +25,6 @@ import { EMOTES, buildRig, poseRig } from "@/avatar/rig";
 import { advanceStep, applyEndowment, loadOnboard } from "@/game/onboarding";
 import { grantMission, loadProfile, saveProfile, useGame } from "@/game/store";
 import {
-  MISSIONS,
   levelInfo,
   loadVibe,
   missionsDone,
@@ -44,6 +43,7 @@ import {
   type StatsMap,
 } from "@/net/stats";
 import { CITIES, CITY_IDS } from "@/world/cities";
+import { CITY_UI } from "@/world/cityUi";
 import {
   buildShareUrl,
   identityCaption,
@@ -52,24 +52,18 @@ import {
 } from "@/world/meets";
 import type { CityId } from "@/world/types";
 
-const CITY_ART: Record<CityId, string> = {
-  bengaluru: "linear-gradient(135deg, #2f6b3a 0%, #7ec8a0 55%, #e7c56a 100%)",
-  pune: "linear-gradient(135deg, #8a3b2e 0%, #e8913c 60%, #f2d9a0 100%)",
-  hyderabad: "linear-gradient(135deg, #3b2a5e 0%, #d9548a 60%, #f2c230 100%)",
-  gurugram: "linear-gradient(135deg, #123a5c 0%, #3d86b8 60%, #b6d2ea 100%)",
-};
-
 function Preview({ look, emote }: { look: Look; emote: number }) {
-  const rig = useMemo(() => buildRig(look), [look]);
+  const key = lookKey(look);
+  // Rebuild whenever the look identity changes (and after HMR of the rig module).
+  const rig = useMemo(() => buildRig(look), [key, look]);
   const group = useRef<THREE.Group>(null);
   const drag = useRef({ down: false, x: 0, vel: 0 });
   const started = useRef(performance.now());
 
-  const key = lookKey(look);
   useEffect(() => {
     started.current = performance.now();
-    // Face the camera so the cute face reads; slow idle spin after.
-    if (group.current) group.current.rotation.y = 0.12;
+    // Slight 3/4 turn so eyes + outfit both read; drag to spin.
+    if (group.current) group.current.rotation.y = 0.28;
     drag.current.vel = 0;
   }, [emote, key]);
 
@@ -77,7 +71,7 @@ function Preview({ look, emote }: { look: Look; emote: number }) {
     const g = group.current;
     if (!g) return;
     if (!drag.current.down) g.rotation.y += drag.current.vel * delta;
-    drag.current.vel += (0.045 - drag.current.vel) * Math.min(1, delta * 0.6);
+    drag.current.vel += (0.028 - drag.current.vel) * Math.min(1, delta * 0.55);
     poseRig(
       rig,
       { phase: 0, speed: 0, emote, emoteT: (performance.now() - started.current) / 1000, seat: 0, time: state.clock.elapsedTime },
@@ -104,7 +98,7 @@ function Preview({ look, emote }: { look: Look; emote: number }) {
         drag.current.down = false;
       }}
     >
-      <primitive object={rig.root} />
+      <primitive key={key} object={rig.root} />
       <mesh position={[0, 0.5, 0]} visible={false}>
         <boxGeometry args={[1.4, 2.2, 1.4]} />
       </mesh>
@@ -128,26 +122,42 @@ function StageGlow({ pulse }: { pulse: number }) {
   );
 }
 
-function PreviewCanvas({ look, emote, pulse }: { look: Look; emote: number; pulse: number }) {
+function PreviewCanvas({
+  look,
+  emote,
+  pulse,
+  cityId,
+}: {
+  look: Look;
+  emote: number;
+  pulse: number;
+  cityId: CityId;
+}) {
+  const ui = CITY_UI[cityId];
+  const floor = useMemo(() => {
+    const c = new THREE.Color(ui.accent);
+    c.multiplyScalar(0.18);
+    return `#${c.getHexString()}`;
+  }, [ui.accent]);
   return (
     <Canvas
       dpr={[1, 2]}
       shadows
       camera={{ fov: 28, position: [0, 1.22, 3.85], near: 0.1, far: 30 }}
-      gl={{ antialias: true, alpha: true }}
+      gl={{ antialias: true, alpha: false }}
       onCreated={({ camera, gl }) => {
-        camera.lookAt(0, 0.98, 0);
+        camera.lookAt(0, 0.9, 0);
         gl.toneMapping = THREE.ACESFilmicToneMapping;
       }}
     >
-      <color attach="background" args={["#12180f"]} />
-      <hemisphereLight args={["#fff2dc", "#3b4a52", 1.05]} />
+      <color attach="background" args={["#0e1210"]} />
+      <hemisphereLight args={["#fff2dc", ui.accent, 1.05]} />
       <directionalLight position={[3, 5, 4]} intensity={2.55} castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024} />
-      <directionalLight position={[-4, 2, -3]} intensity={1.2} color="#8fc8ff" />
-      <spotLight position={[0, 4.2, 1.5]} intensity={1.4} angle={0.55} penumbra={0.6} color="#f2c230" />
+      <directionalLight position={[-4, 2, -3]} intensity={1.15} color={ui.accent} />
+      <spotLight position={[0, 4.2, 1.5]} intensity={1.35} angle={0.55} penumbra={0.6} color="#f2c230" />
       <mesh rotation-x={-Math.PI / 2} receiveShadow position={[0, -0.005, 0]}>
         <circleGeometry args={[1.35, 48]} />
-        <meshStandardMaterial color="#1a2218" roughness={0.85} metalness={0.08} />
+        <meshStandardMaterial color={floor} roughness={0.85} metalness={0.08} />
       </mesh>
       <StageGlow pulse={pulse} />
       <Preview look={look} emote={emote} />
@@ -350,57 +360,52 @@ export default function Menu() {
     }
   };
 
+  const cityUi = CITY_UI[cityId];
+  const talkingAll = CITY_IDS.reduce((n, id) => n + (stats[id]?.talking ?? 0), 0);
+
   return (
-    <main className="menu">
+    <main
+      className="menu"
+      data-city={cityId}
+      style={
+        {
+          "--city-accent": cityUi.accent,
+          "--city-soft": cityUi.accentSoft,
+          "--city-art": cityUi.art,
+        } as CSSProperties
+      }
+    >
       <section className="menu-left">
-        <header>
+        <header className="menu-hero">
+          <p className="brand-mark">India IRL</p>
+          <h1>
+            Hang out in
+            <br />
+            <em>{city.name}</em>
+          </h1>
+          <p className="hook-line">Build a look. Pick a plaza. Walk into a live room of people — right now.</p>
           <p className="live-pill">
             <span className="live-dot" />
-            {honestHeadcount(meetId ? here : totalOnline, meetId ? talking : CITY_IDS.reduce((n, id) => n + (stats[id]?.talking ?? 0), 0), place)}
-          </p>
-          <h1>INDIA IRL</h1>
-          <p className="hook-line">
-            Walk into a room of people in your city. Right now.
+            {honestHeadcount(meetId ? here : totalOnline, meetId ? talking : talkingAll, place)}
           </p>
           {joins.length > 0 ? (
             <div className="join-ticker" aria-live="polite">
-              {joins.slice(0, 3).map((j, i) => (
+              {joins.slice(0, 2).map((j, i) => (
                 <span key={`${j.name}-${j.at}-${i}`}>
-                  {j.name} joined {j.meet ? city.meets.find((m) => m.id === j.meet)?.label ?? j.meet : city.name}
+                  {j.name} → {j.meet ? city.meets.find((m) => m.id === j.meet)?.label ?? j.meet : city.name}
                 </span>
               ))}
             </div>
           ) : null}
         </header>
 
-        <div className="vibe-card">
-          <div className="vibe-top">
-            <div>
-              <strong>Lv {info.level}</strong>
-              <span>{localTitle || info.title}</span>
-            </div>
-            <div className={`streak ${vibe.streak > 0 ? "on" : ""}`} title="Come back tomorrow to keep it">
-              <em>{vibe.streak || 0}</em>
-              <span>day streak</span>
-            </div>
-          </div>
+        <div className="vibe-strip" title={`${info.into}/${info.need} vibe · ${done}/5 missions`}>
+          <strong>Lv {info.level}</strong>
+          <span>{localTitle || info.title}</span>
           <div className="xp-bar" aria-hidden>
             <i style={{ width: `${Math.round(info.progress * 100)}%` }} />
           </div>
-          <p className="xp-meta">
-            {info.into}/{info.need} vibe to next title
-            {vibe.bestStreak > vibe.streak ? ` · best ${vibe.bestStreak}` : ""}
-          </p>
-          <ul className="missions">
-            {MISSIONS.map((m) => (
-              <li key={m.id} className={vibe.missions[m.id] ? "done" : ""}>
-                <span>{vibe.missions[m.id] ? "✓" : "○"}</span>
-                {m.label}
-                <em>+{m.xp}</em>
-              </li>
-            ))}
-          </ul>
-          <p className="mission-progress">{done}/5 today · clear the set before midnight IST</p>
+          <em className={vibe.streak > 0 ? "on" : ""}>{vibe.streak || 0}d</em>
         </div>
 
         <label className="field">
@@ -414,30 +419,46 @@ export default function Menu() {
           />
         </label>
 
-        <div className="cities">
-          {CITY_IDS.map((id) => {
-            const c = CITIES[id];
-            const n = stats[id]?.online ?? 0;
-            const t = stats[id]?.talking ?? 0;
-            return (
-              <button key={id} className={id === cityId ? "city on" : "city"} onClick={() => useGame.setState({ cityId: id, meetId: null })}>
-                <i style={{ background: CITY_ART[id] }} />
-                <b>{c.name}</b>
-                <span>{c.hubs.slice(0, 3).join(" · ")}</span>
-                <em className={n > 0 ? "hot" : ""}>{n > 0 ? `${n} online${t > 0 ? ` · ${t} mic` : ""}` : "Be first"}</em>
-              </button>
-            );
-          })}
+        <div className="city-pick">
+          <span className="meets-label">Choose your city</span>
+          <div className="cities">
+            {CITY_IDS.map((id) => {
+              const c = CITIES[id];
+              const ui = CITY_UI[id];
+              const n = stats[id]?.online ?? 0;
+              const t = stats[id]?.talking ?? 0;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  className={id === cityId ? "city on" : "city"}
+                  data-city={id}
+                  onClick={() => useGame.setState({ cityId: id, meetId: null })}
+                >
+                  <i style={{ background: ui.art }} aria-hidden />
+                  <div className="city-copy">
+                    <b>{c.name}</b>
+                    <small>{ui.nick}</small>
+                    <span>{ui.landmark}</span>
+                  </div>
+                  <em className={n > 0 ? "hot" : ""}>
+                    {n > 0 ? `${n} online${t > 0 ? ` · ${t} mic` : ""}` : "Be first"}
+                  </em>
+                </button>
+              );
+            })}
+          </div>
+          <p className="city-mood">
+            <strong>{cityUi.mood}</strong>
+            <span>{city.tagline}</span>
+          </p>
         </div>
-        <p className="blurb">
-          {city.tagline} · <strong>{honestHeadcount(here, talking, place)}</strong>
-        </p>
 
         <div className="meets">
-          <span className="meets-label">Meet friends at</span>
+          <span className="meets-label">Spawn at</span>
           <div className="meet-row">
             <button type="button" className={!meetId ? "chip on" : "chip"} onClick={() => useGame.setState({ meetId: null })}>
-              Default spawn
+              City spawn
             </button>
             {city.meets.map((m) => {
               const ms = cityStat?.meets?.[m.id];
@@ -465,27 +486,30 @@ export default function Menu() {
           </p>
         ) : null}
 
-        <button className="play pulse" disabled={!ready} onClick={go}>
-          {ready ? `Enter ${place} · +15 vibe` : "Name yourself to enter"}
-        </button>
-        <div className="invite-row">
-          <button type="button" className="ghost" onClick={copyInvite}>
-            {copied ? "Link copied" : "Copy invite"}
+        <div className="enter-block">
+          <button className="play pulse" disabled={!ready} onClick={go}>
+            {ready ? `Enter ${place}` : "Name yourself to enter"}
           </button>
-          <button type="button" className="ghost" onClick={shareWhatsApp}>
-            WhatsApp
-          </button>
-          <button type="button" className="ghost" onClick={startPlan}>
-            Start a plan
-          </button>
+          <div className="invite-row">
+            <button type="button" className="ghost" onClick={copyInvite}>
+              {copied ? "Link copied" : "Copy invite"}
+            </button>
+            <button type="button" className="ghost" onClick={shareWhatsApp}>
+              WhatsApp
+            </button>
+            <button type="button" className="ghost" onClick={startPlan}>
+              Start a plan
+            </button>
+          </div>
+          <p className="fine">Same city = same room. Live counts — never faked.</p>
         </div>
-        <p className="fine">Same city = same room. Counts are live from the relay — never faked.</p>
       </section>
 
       <section className="menu-stage">
-        <PreviewCanvas look={look} emote={emote} pulse={pulse} />
+        <div className="stage-wash" aria-hidden />
+        <PreviewCanvas look={look} emote={emote} pulse={pulse} cityId={cityId} />
         <div className="stage-badge">
-          <span>Your look</span>
+          <span>Your look · {cityUi.nick}</span>
           <strong>{localTitle || info.title}</strong>
           <em className="identity-caption">{caption}</em>
         </div>

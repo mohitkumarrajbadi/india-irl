@@ -288,6 +288,23 @@ wss.on("connection", (ws) => {
           num(p[4], 0, 3) | 0, num(p[5], 0, 5) | 0, num(p[6], 0, 6) | 0, ride,
         ],
       });
+    } else if (msg.t === "sb" && typeof msg.b === "string" && msg.b.length >= 16 && msg.b.length <= 128) {
+      // Phase D binary pose (base64). Peek x/z from payload for interest; fan-out opaque.
+      try {
+        const raw = Buffer.from(msg.b, "base64");
+        if (raw.length >= 12 && raw[0] === 1) {
+          const x = raw.readFloatLE(4);
+          const z = raw.readFloatLE(8);
+          if (Number.isFinite(x) && Number.isFinite(z)) {
+            ws.meta.x = Math.min(5000, Math.max(-5000, x));
+            ws.meta.z = Math.min(5000, Math.max(-5000, z));
+            ws.meta.meetId = nearestMeetId(ws.meta.city, ws.meta.x, ws.meta.z);
+          }
+        }
+      } catch {
+        /* ignore bad base64 */
+      }
+      broadcastState(room, ws, { t: "sb", id, b: msg.b });
     } else if (msg.t === "hit") {
       const to = typeof msg.to === "string" && ID_RE.test(msg.to) ? msg.to : "";
       if (!to) return;

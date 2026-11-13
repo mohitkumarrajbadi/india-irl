@@ -56,6 +56,7 @@ export function Hud({ city }: { city: CityData }) {
   const chatOpen = useGame((s) => s.chatOpen);
   const toast = useGame((s) => s.toast);
   const toastAt = useGame((s) => s.toastAt);
+  const wasted = useGame((s) => s.wasted);
   const status = useNet((s) => s.status);
   const peers = useNet((s) => s.peerIds.length);
   const selfId = useNet((s) => s.selfId);
@@ -148,7 +149,13 @@ export function Hud({ city }: { city: CityData }) {
   };
 
   return (
-    <div className="hud">
+    <div className={`hud${wasted ? " is-wasted" : ""}`}>
+      {wasted ? (
+        <div className="wasted" aria-live="assertive">
+          <p className="wasted-word">WASTED</p>
+          <p className="wasted-sub">Respawning…</p>
+        </div>
+      ) : null}
       <section className="panel brand">
         <h1>INDIA IRL</h1>
         <p className="eyebrow">{city.config.name} · {city.config.hubs.slice(0, 2).join(" · ")}</p>
@@ -169,7 +176,7 @@ export function Hud({ city }: { city: CityData }) {
         ) : (
           <p className="vibe-daily">Daily clear</p>
         )}
-        <button className="leave" onClick={() => useGame.setState({ phase: "menu" })}>
+        <button className="leave" onClick={() => useGame.setState({ phase: "menu", wasted: false })}>
           Change city / avatar
         </button>
         <button type="button" className="leave invite-me" onClick={inviteToMe}>

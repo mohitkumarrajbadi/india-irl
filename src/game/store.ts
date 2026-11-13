@@ -43,6 +43,8 @@ type GameState = {
   chatOpen: boolean;
   toast: string;
   toastAt: number;
+  /** Vice City–style WASTED overlay (set once on enter/exit — not per frame). */
+  wasted: boolean;
   hud: Hud;
   /** Render budget preference. Changing it remounts the Canvas. */
   qualityId: QualityId;
@@ -99,6 +101,7 @@ export const useGame = create<GameState>((set) => ({
   chatOpen: false,
   toast: "",
   toastAt: 0,
+  wasted: false,
   qualityId: initialQuality,
   meetId: null,
   vibe: typeof window !== "undefined" ? loadVibe() : { xp: 0, streak: 0, bestStreak: 0, lastDay: "", missions: { enter: false, ride: false, emote: false, chat: false, hang: false }, sessions: 0, lookTweaks: 0 },

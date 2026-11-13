@@ -131,11 +131,63 @@ export function generateCity(cfg: CityConfig): CityData {
   };
 
   const landmarkAt = new Map(cfg.landmarks.map((l) => [`${l.bi},${l.bj}`, l]));
+  const protectedCells = new Set<string>([
+    `${cfg.spawn.bi},${cfg.spawn.bj}`,
+    ...cfg.landmarks.map((l) => `${l.bi},${l.bj}`),
+    ...cfg.meets.map((m) => `${m.bi},${m.bj}`),
+  ]);
+  // Carve an irregular green fringe so the city silhouette isn't a perfect rectangle.
+  // Corner bites + mid-edge notches, city-seeded, never eats landmarks/spawn/meets.
+  const fringeCells = new Set<string>();
+  const bite = (bi: number, bj: number, p: number) => {
+    if (bi < 0 || bj < 0 || bi >= cols || bj >= rows) return;
+    const key = `${bi},${bj}`;
+    if (protectedCells.has(key)) return;
+    if (chance(rng, p)) fringeCells.add(key);
+  };
+  // Missing / soft corners (asymmetric per city seed).
+  for (const [ci, cj] of [
+    [0, 0],
+    [cols - 1, 0],
+    [0, rows - 1],
+    [cols - 1, rows - 1],
+  ] as const) {
+    const depth = 1 + Math.floor(rng() * (cfg.id === "gurugram" ? 2 : 3));
+    for (let d = 0; d < depth; d += 1) {
+      for (let e = 0; e < depth - d; e += 1) {
+        const sbi = ci === 0 ? d : cols - 1 - d;
+        const sbj = cj === 0 ? e : rows - 1 - e;
+        bite(sbi, sbj, 0.92 - d * 0.12);
+        bite(ci === 0 ? e : cols - 1 - e, cj === 0 ? d : rows - 1 - d, 0.85 - d * 0.1);
+      }
+    }
+  }
+  // Mid-edge notches — Pune/Hyd get more organic bites; Gurugram stays sharper.
+  const notchP = cfg.id === "gurugram" ? 0.28 : cfg.id === "bengaluru" ? 0.4 : 0.48;
+  for (let i = 2; i < cols - 2; i += 1) {
+    bite(i, 0, notchP);
+    bite(i, rows - 1, notchP * 0.9);
+  }
+  for (let j = 2; j < rows - 2; j += 1) {
+    bite(0, j, notchP * 0.85);
+    bite(cols - 1, j, notchP);
+  }
+
   const blocks: Block[] = [];
   for (let bi = 0; bi < cols; bi += 1) {
     for (let bj = 0; bj < rows; bj += 1) {
       const district = cfg.districts.findIndex((d) => bi >= d.i0 && bi <= d.i1 && bj >= d.j0 && bj <= d.j1);
       const landmark = landmarkAt.get(`${bi},${bj}`);
+      const fringe = fringeCells.has(`${bi},${bj}`);
+      const kind = landmark
+        ? landmark.kind === "lake"
+          ? "lake"
+          : "landmark"
+        : fringe
+          ? "park"
+          : district >= 0
+            ? cfg.districts[district].kind
+            : "resi";
       blocks.push({
         bi,
         bj,
@@ -143,8 +195,9 @@ export function generateCity(cfg: CityConfig): CityData {
         maxX: xs[bi + 1] - roadsX[bi + 1].half,
         minZ: zs[bj] + roadsZ[bj].half,
         maxZ: zs[bj + 1] - roadsZ[bj + 1].half,
-        kind: landmark ? (landmark.kind === "lake" ? "lake" : "landmark") : district >= 0 ? cfg.districts[district].kind : "resi",
+        kind,
         district,
+        fringe: fringe || undefined,
       });
     }
   }
@@ -160,6 +213,7 @@ export function generateCity(cfg: CityConfig): CityData {
   const stalls: CityData["stalls"] = [];
   const extras: CityData["extras"] = [];
   const cows: CityData["cows"] = [];
+  const strays: CityData["strays"] = [];
   const parked: CityData["parked"] = [];
   const boxes: Aabb[] = [];
   const circles: CityData["circles"] = [];
@@ -214,9 +268,11 @@ export function generateCity(cfg: CityConfig): CityData {
         });
       }
     } else if (b.kind === "park") {
-      const count = Math.floor((bw * bd) / 95);
+      // Fringe parks (irregular city edge) are greener / more open — softens the square silhouette.
+      const dens = b.fringe ? 68 : 95;
+      const count = Math.floor((bw * bd) / dens);
       for (let k = 0; k < count; k += 1) {
-        addTree(between(rng, b.minX + 3, b.maxX - 3), between(rng, b.minZ + 3, b.maxZ - 3), 1.15);
+        addTree(between(rng, b.minX + 3, b.maxX - 3), between(rng, b.minZ + 3, b.maxZ - 3), b.fringe ? 1.25 : 1.15);
       }
     } else {
       const style = LOTS[b.kind];
@@ -340,8 +396,6 @@ export function generateCity(cfg: CityConfig): CityData {
       // City-flavoured street life: carts, shrines, cranes, tankers.
       {
         const s2 = e.len * between(rng, 0.12, 0.88);
-        const sx = e.x + e.ax * s2 + e.ox * 0.95;
-        const sz = e.z + e.az * s2 + e.oz * 0.95;
         const id = cfg.id;
         let kind: number | null = null;
         if ((b.kind === "market" || b.kind === "old") && chance(rng, id === "hyderabad" ? 0.38 : 0.28)) {
@@ -358,8 +412,14 @@ export function generateCity(cfg: CityConfig): CityData {
           kind = 5; // water tanker
         } else if (b.kind === "park" && chance(rng, id === "pune" ? 0.22 : 0.1)) {
           kind = 1; // flower cart near gardens
-        } else if (e.road.arterial && chance(rng, 0.12)) {
-          kind = 6; // traffic signal on arterial corners / mid-block
+        } else if (
+          e.road.arterial &&
+          chance(
+            rng,
+            id === "bengaluru" ? 0.22 : id === "gurugram" ? 0.2 : id === "hyderabad" ? 0.16 : 0.13,
+          )
+        ) {
+          kind = 6; // traffic signal — denser on Bengaluru / Gurugram arterials
         } else if (e.road.arterial && chance(rng, id === "bengaluru" || id === "gurugram" ? 0.16 : 0.1)) {
           kind = 7; // speed breaker — IT corridors love them
         } else if (
@@ -370,6 +430,11 @@ export function generateCity(cfg: CityConfig): CityData {
           kind = 8; // auto stand bay
         }
         if (kind !== null) {
+          // Speed breakers sit in the near lane; everything else stays on the kerb.
+          const into =
+            kind === 7 ? 1.3 + (e.road.lanes[0] ?? e.road.half * 0.45) : kind === 6 ? 0.35 : 0.95;
+          const sx = e.x + e.ax * s2 + e.ox * into;
+          const sz = e.z + e.az * s2 + e.oz * into;
           extras.push({ x: sx, z: sz, rot, s: kind === 3 ? between(rng, 0.85, 1.15) : 1, v: kind });
           if (kind === 3) boxes.push({ minX: sx - 1.2, maxX: sx + 1.2, minZ: sz - 1.2, maxZ: sz + 1.2, h: 28 });
           else if (kind === 6) circles.push({ x: sx, z: sz, r: 0.35 });
@@ -410,6 +475,54 @@ export function generateCity(cfg: CityConfig): CityData {
     const z = e.z + e.az * s;
     cows.push({ x, z, rot: between(rng, 0, Math.PI * 2), s: between(rng, 0.9, 1.1), v: Math.floor(rng() * 3) });
     circles.push({ x, z, r: 0.9 });
+  }
+
+  // Street dogs — city flavour: Bengaluru/Gurugram tech belts, Pune parks, Hyd markets.
+  for (let i = 0; i < cfg.dogs; i += 1) {
+    const id = cfg.id;
+    const pool = blocks.filter((b) => {
+      if (id === "bengaluru" || id === "gurugram") return b.kind === "tech" || b.kind === "cbd" || b.kind === "park" || b.kind === "market";
+      if (id === "pune") return b.kind === "park" || b.kind === "resi" || b.kind === "market" || b.kind === "old";
+      return b.kind === "market" || b.kind === "old" || b.kind === "park" || b.fringe;
+    });
+    const b = pool.length > 0 ? pick(rng, pool) : blocks[0];
+    const e = pick(rng, blockEdges(b, roadsX, roadsZ, 2.0));
+    const s = e.len * between(rng, 0.15, 0.85);
+    const x = e.x + e.ax * s + e.ox * between(rng, 0.2, 0.8);
+    const z = e.z + e.az * s + e.oz * between(rng, 0.2, 0.8);
+    strays.push({
+      x,
+      z,
+      rot: between(rng, 0, Math.PI * 2),
+      s: between(rng, 0.85, 1.15),
+      v: Math.floor(rng() * 4),
+      kind: 0,
+    });
+    circles.push({ x, z, r: 0.35 });
+  }
+
+  // Goats — denser in Hyderabad old city / market lanes; rare on Gurugram glass corridors.
+  for (let i = 0; i < cfg.goats; i += 1) {
+    const id = cfg.id;
+    const pool = blocks.filter((b) => {
+      if (id === "hyderabad") return b.kind === "old" || b.kind === "market";
+      if (id === "pune") return b.kind === "old" || b.kind === "market" || b.kind === "resi";
+      return b.kind === "old" || b.kind === "market" || b.fringe;
+    });
+    const b = pool.length > 0 ? pick(rng, pool) : blocks[0];
+    const e = pick(rng, blockEdges(b, roadsX, roadsZ, 2.4));
+    const s = e.len * between(rng, 0.2, 0.8);
+    const x = e.x + e.ax * s + e.ox * 0.5;
+    const z = e.z + e.az * s + e.oz * 0.5;
+    strays.push({
+      x,
+      z,
+      rot: between(rng, 0, Math.PI * 2),
+      s: between(rng, 0.9, 1.2),
+      v: Math.floor(rng() * 3),
+      kind: 1,
+    });
+    circles.push({ x, z, r: 0.4 });
   }
 
   // Median shrubs along arterials (stay out of the intersection boxes).
@@ -501,6 +614,7 @@ export function generateCity(cfg: CityConfig): CityData {
     stalls,
     extras,
     cows,
+    strays,
     parked,
     metroPillars,
     metroSegments: stations,

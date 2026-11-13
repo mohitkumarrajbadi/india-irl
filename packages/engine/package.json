@@ -1,0 +1,18 @@
+{
+  "name": "@india-irl/engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./physics/bridge": "./src/physics/bridge.ts",
+    "./physics/protocol": "./src/physics/protocol.ts"
+  },
+  "peerDependencies": {
+    "@dimforge/rapier3d-compat": "^0.14.0"
+  },
+  "devDependencies": {
+    "@dimforge/rapier3d-compat": "^0.14.0",
+    "typescript": "^5.9.0"
+  }
+}

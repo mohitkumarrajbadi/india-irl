@@ -15,6 +15,8 @@ import {
 } from "@/game/onboarding";
 import { applyQuality, loadQualityPreference, quality } from "@/game/quality";
 import { live, runtime } from "@/game/runtime";
+import { disposeDriveSession, ensureDriveWorker } from "@/game/sim/drive-session";
+import { isRapierDriveEnabled } from "@/game/sim/flags";
 import { toast, useGame } from "@/game/store";
 import { StaticGrid } from "@/lib/spatial";
 import { connect, disconnect, useNet } from "@/net/store";
@@ -56,8 +58,13 @@ export default function GameCanvas() {
 
   useEffect(() => {
     connect(cityId, name, look);
+    // Phase B/C: warm the sim worker so first step isn't arcade-fallback-only.
+    if (isRapierDriveEnabled()) {
+      ensureDriveWorker({ x: live.x, y: 0, z: live.z, yaw: live.yaw });
+    }
     return () => {
       disconnect();
+      disposeDriveSession();
       runtime.city = null;
       runtime.grid = null;
     };

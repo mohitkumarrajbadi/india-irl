@@ -4,15 +4,15 @@
  */
 
 export const FOOT = {
-  walk: 4.35,
-  sprint: 7.6,
-  accel: 11.5,
-  brake: 16,
-  friction: 9.5,
-  airControl: 0.38,
-  gravity: 18.5,
-  jump: 5.4,
-  coyote: 0.09,
+  walk: 4.45,
+  sprint: 7.8,
+  accel: 12.2,
+  brake: 17.5,
+  friction: 10.2,
+  airControl: 0.42,
+  gravity: 19.2,
+  jump: 5.55,
+  coyote: 0.1,
   radius: 0.32,
 } as const;
 

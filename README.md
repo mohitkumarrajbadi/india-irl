@@ -124,3 +124,30 @@ src/components world, player, HUD, menu
 ```
 
 North is +Z and east is −X. One world unit is one meter.
+
+## Architecture (production target)
+
+| Doc | What |
+| --- | --- |
+| [docs/TDD.md](docs/TDD.md) | Product / system design |
+| [docs/HLD.md](docs/HLD.md) | Runtime ownership & data flow |
+| [docs/LLD-engine.md](docs/LLD-engine.md) | Engine file contracts |
+| [docs/ENGINEERING.md](docs/ENGINEERING.md) | LOC limits, layering, naming |
+
+**Shadow Rapier (Phase A):** `?shadowSim=1` — green wireframe ghost; arcade stays authoritative.
+
+**Rapier drive (Phase B):** `?rapierDrive=1` — vehicles on physics worker; foot arcade. See `docs/LLD-phase-b.md`.
+
+**Sim core (Phase C):** `?simCore=1` — foot + vehicles from Rapier snapshots (arcade only until worker ready). See `docs/LLD-phase-c.md`.
+
+**Net v2 (Phase D):** `?netV2=1` — binary poses + Hermite remotes + codec worker; relay unchanged for rooms. See `docs/LLD-phase-d.md`.
+
+Scaffold (not yet wired into `npm run dev`):
+
+```
+packages/engine/    Rapier sim worker, raycast vehicles, input intent
+packages/network/   Hermite interp + future WebRTC worker
+packages/mods/      Declarative mod manifests (no peer JS)
+packages/shared/    Tick rates, VK, action ids
+apps/web/           Future Next/R3F home (migrates from src/)
+```

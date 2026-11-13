@@ -1,5 +1,7 @@
 import type { StaticGrid } from "../lib/spatial";
 import type { Obstacle, TrafficSim } from "../vehicles/traffic";
+import type { PedestrianSim } from "../world/pedestrians";
+import type { PoliceSim } from "../world/police";
 import type { CityData } from "../world/types";
 import type { VehicleKind } from "../vehicles/specs";
 
@@ -32,6 +34,8 @@ export const runtime = {
   city: null as CityData | null,
   grid: null as StaticGrid | null,
   traffic: null as TrafficSim | null,
+  peds: null as PedestrianSim | null,
+  police: null as PoliceSim | null,
 };
 
 /** Things traffic should avoid, rebuilt each frame. */

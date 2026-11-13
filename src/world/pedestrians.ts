@@ -2,6 +2,8 @@ import { clamp } from "../lib/math.ts";
 import { between, mulberry32, pick, type Rng } from "../lib/rng.ts";
 import type { CityData, DistrictKind } from "./types.ts";
 
+export type PedMood = "walk" | "flee" | "fight";
+
 export type Ped = {
   x: number;
   z: number;
@@ -20,6 +22,11 @@ export type Ped = {
   t: number;
   /** 1 forward along a→b, -1 reverse. */
   dir: number;
+  /** 0 timid … 1 street-tough — some fight back, some don't. */
+  courage: number;
+  mood: PedMood;
+  moodUntil: number;
+  fightCd: number;
 };
 
 type Edge = { ax: number; az: number; bx: number; bz: number; kind: DistrictKind | "landmark" | "lake" };
@@ -108,6 +115,10 @@ export class PedestrianSim {
       bz: edge.bz,
       t,
       dir,
+      courage: this.rng(),
+      mood: "walk",
+      moodUntil: 0,
+      fightCd: 0,
     };
   }
 
@@ -122,7 +133,47 @@ export class PedestrianSim {
     p.speed = between(this.rng, 0.9, 1.55);
   }
 
-  update(dt: number, px: number, pz: number): void {
+  /**
+   * Player punched/kicked near this ped. Returns "fight" if they swing back.
+   * Nearby crowd also reacts (some flee, some join).
+   */
+  reactToHit(target: Ped, px: number, pz: number, now: number): "fight" | "flee" | "miss" {
+    const choice: "fight" | "flee" = target.courage > 0.52 && this.rng() < 0.55 + target.courage * 0.35 ? "fight" : "flee";
+    target.mood = choice;
+    target.moodUntil = now + (choice === "fight" ? 2200 : 3500);
+    target.fightCd = now + 600;
+    // Bystanders within ~9m: mix of flee / occasional fight-back.
+    for (const p of this.peds) {
+      if (p === target) continue;
+      const d2 = (p.x - px) ** 2 + (p.z - pz) ** 2;
+      if (d2 > 9 * 9) continue;
+      if (p.mood !== "walk") continue;
+      if (p.courage > 0.7 && this.rng() < 0.28) {
+        p.mood = "fight";
+        p.moodUntil = now + 1800;
+      } else if (this.rng() < 0.72) {
+        p.mood = "flee";
+        p.moodUntil = now + 2800 + this.rng() * 1500;
+      }
+    }
+    return choice;
+  }
+
+  /** True if a fighting ped lands a counter within range this frame. */
+  tryCounter(px: number, pz: number, now: number): boolean {
+    for (const p of this.peds) {
+      if (p.mood !== "fight") continue;
+      if (now < p.fightCd) continue;
+      const d2 = (p.x - px) ** 2 + (p.z - pz) ** 2;
+      if (d2 > 2.1 * 2.1) continue;
+      p.fightCd = now + 900;
+      p.yaw = Math.atan2(px - p.x, pz - p.z);
+      return true;
+    }
+    return false;
+  }
+
+  update(dt: number, px: number, pz: number, now = performance.now()): void {
     const bubble2 = 220 * 220;
     for (const p of this.peds) {
       const dxp = p.x - px;
@@ -137,10 +188,40 @@ export class PedestrianSim {
         continue;
       }
 
+      if (p.mood !== "walk" && now > p.moodUntil) {
+        p.mood = "walk";
+        p.speed = between(this.rng, 0.9, 1.55);
+        this.retarget(p);
+      }
+
+      if (p.mood === "flee") {
+        const dx = p.x - px;
+        const dz = p.z - pz;
+        const d = Math.hypot(dx, dz) || 1;
+        const spd = 3.4;
+        p.x += (dx / d) * spd * dt;
+        p.z += (dz / d) * spd * dt;
+        p.yaw = Math.atan2(dx, dz);
+        p.phase += spd * dt * 8;
+        continue;
+      }
+
+      if (p.mood === "fight") {
+        const dx = px - p.x;
+        const dz = pz - p.z;
+        const d = Math.hypot(dx, dz) || 1;
+        const spd = d > 1.4 ? 2.6 : 0.4;
+        p.x += (dx / d) * spd * dt;
+        p.z += (dz / d) * spd * dt;
+        p.yaw = Math.atan2(dx, dz);
+        p.phase += 10 * dt;
+        continue;
+      }
+
       const ex = p.bx - p.ax;
       const ez = p.bz - p.az;
       const len = Math.hypot(ex, ez) || 1;
-      p.t += ((p.dir * p.speed * dt) / len);
+      p.t += (p.dir * p.speed * dt) / len;
       if (p.t > 1 || p.t < 0) {
         this.retarget(p);
       }

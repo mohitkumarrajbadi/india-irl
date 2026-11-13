@@ -5,7 +5,7 @@ import { createVehicle, type VehicleObject } from "../vehicles/object";
 import type { CityConfig } from "../world/types";
 import { quality } from "../game/quality";
 import { TOP_COLORS, type Look } from "./appearance";
-import { buildRig, poseRig, SEAT, type Rig } from "./rig";
+import { buildRig, poseRig, SEAT, SEAT_HIP_OFFSET, type Rig } from "./rig";
 
 export type ActorFrame = {
   x: number;
@@ -138,14 +138,14 @@ export class Actor {
       this.vehicle.root.rotation.y = f.yaw;
       this.vehicle.tilt.rotation.z = lod === 0 ? f.roll : 0;
       seatWorld(spec, 0, 0, 0, f.yaw, seatPos);
-      rigRoot.position.set(seatPos.x, spec.seats[0].y - 0.75, seatPos.z);
+      rigRoot.position.set(seatPos.x, spec.seats[0].y - SEAT_HIP_OFFSET, seatPos.z);
       rigRoot.rotation.set(0, f.yaw, lod === 0 ? f.roll * 0.8 : 0);
       seat = spec.seats[0].pose;
       tagY = f.vehicle === 3 ? 2.15 : f.vehicle === 1 ? 2.35 : this.rig.height + 0.42;
     } else if (f.passenger && f.vehicle > 0) {
       const spec = SPECS[f.vehicle as 1 | 2 | 3];
       const s = spec.seats[Math.min(f.seat, spec.seats.length - 1)];
-      rigRoot.position.set(0, s.y - 0.75, 0);
+      rigRoot.position.set(0, s.y - SEAT_HIP_OFFSET, 0);
       rigRoot.rotation.set(0, f.yaw, 0);
       seat = s.pose;
       tagY = f.vehicle === 3 ? 2.15 : f.vehicle === 1 ? 2.35 : this.rig.height + 0.42;

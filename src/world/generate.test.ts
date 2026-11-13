@@ -33,6 +33,11 @@ for (const id of CITY_IDS) {
   assert.ok(city.metroPillars.length > 8, `${id}: metro pillars missing`);
   assert.ok(city.trees.length > 100);
   assert.ok(districtNameAt(city, city.spawn.x, city.spawn.z).length > 0);
-  console.log(`${id}: ${city.buildings.length} buildings, ${city.trees.length} trees, ${city.boxes.length + city.circles.length} colliders, ${ms.toFixed(1)} ms`);
+  const fringe = city.blocks.filter((b) => b.fringe).length;
+  assert.ok(fringe >= 4, `${id}: expected irregular fringe parks, got ${fringe}`);
+  assert.ok(city.strays.length >= CITIES[id].dogs + CITIES[id].goats - 1, `${id}: strays missing`);
+  const signals = city.extras.filter((e) => e.v === 6).length;
+  assert.ok(signals >= 2, `${id}: expected traffic signals, got ${signals}`);
+  console.log(`${id}: ${city.buildings.length} buildings, ${city.trees.length} trees, fringe ${fringe}, signals ${signals}, strays ${city.strays.length}, ${ms.toFixed(1)} ms`);
 }
 console.log("world checks passed");

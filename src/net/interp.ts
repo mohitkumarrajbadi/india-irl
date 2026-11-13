@@ -1,22 +1,33 @@
 import { wrapAngle } from "@/lib/math";
+import { isNetV2Enabled } from "@/game/sim/flags";
+import { sampleRemoteHermite } from "@india-irl/network";
 import type { Peer } from "./store";
 
 const DELAY_MS = 110;
 const MAX_EXTRAPOLATE_MS = 160;
 
 /**
- * Snapshot interpolation: render each peer ~110 ms in the past so there are
- * usually two real snapshots to blend between. Past the newest one, dead-reckon
- * along the last heading for a short while rather than freezing.
+ * Snapshot interpolation: ~110 ms behind. netV2 uses Hermite on XZ;
+ * legacy uses linear blend.
  */
 export function samplePeer(p: Peer, now: number): void {
   if (p.sampledAt === now) return;
   p.sampledAt = now;
   const s = p.snaps;
   if (s.length === 0) return;
+
+  if (isNetV2Enabled()) {
+    const out = { x: p.rx, z: p.rz, yaw: p.ryaw, speed: p.rspeed };
+    sampleRemoteHermite(s, now, out);
+    p.rx = out.x;
+    p.rz = out.z;
+    p.ryaw = out.yaw;
+    p.rspeed = out.speed;
+    return;
+  }
+
   const rt = now - DELAY_MS;
   const last = s[s.length - 1];
-
   if (s.length === 1 || rt <= s[0].t) {
     const first = rt <= s[0].t ? s[0] : last;
     p.rx = first.x;

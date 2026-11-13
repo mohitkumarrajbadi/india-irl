@@ -25,6 +25,21 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@india-irl/engine": [
+        "./packages/engine/src/index.ts"
+      ],
+      "@india-irl/engine/*": [
+        "./packages/engine/src/*"
+      ],
+      "@india-irl/shared": [
+        "./packages/shared/src/index.ts"
+      ],
+      "@india-irl/network": [
+        "./packages/network/src/index.ts"
+      ],
+      "@india-irl/network/*": [
+        "./packages/network/src/*"
       ]
     },
     "allowImportingTsExtensions": true

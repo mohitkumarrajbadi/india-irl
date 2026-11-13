@@ -143,26 +143,27 @@ export function stepDrive(s: DriveState, input: DriveInput, spec: VehicleSpec, d
     else s.speed = Math.max(-spec.reverse, s.speed - accel * 0.5 * dt);
   } else {
     // Rolling resistance + aero-ish drag.
-    const drag = 0.35 + absSpd * 0.045;
+    const drag = 0.42 + absSpd * 0.052;
     s.speed *= Math.exp(-drag * dt);
     if (absSpd < 0.06) s.speed = 0;
   }
-  if (s.speed > top) s.speed -= (8 + (s.speed - top) * 4) * dt;
+  if (s.speed > top) s.speed -= (9 + (s.speed - top) * 4.5) * dt;
 
-  const steerRate = input.handbrake && absSpd > 3 ? 10 : 7.2;
+  // Steering authority drops at high speed; handbrake keeps yaw lively.
+  const steerRate = input.handbrake && absSpd > 3 ? 11 : 7.6;
   s.steer += (input.steer - s.steer) * Math.min(1, dt * steerRate);
-  const understeer = 1 + absSpd / (input.handbrake ? 7.5 : 10.5);
+  const understeer = 1 + absSpd / (input.handbrake ? 7.2 : 9.8);
   const angle = (s.steer * spec.maxSteer) / understeer;
   let yawRate = (s.speed * Math.tan(angle)) / spec.wheelBase;
-  if (input.handbrake && absSpd > 4) yawRate *= 1.35; // slide yaw
+  if (input.handbrake && absSpd > 4) yawRate *= 1.4; // slide yaw
   // Right steer (positive) turns toward -X when facing +Z, so yaw decreases.
   s.yaw -= yawRate * dt;
   s.x += Math.sin(s.yaw) * s.speed * dt;
   s.z += Math.cos(s.yaw) * s.speed * dt;
 
-  const leanAmt = input.handbrake ? spec.lean * 1.25 : spec.lean;
-  const targetRoll = s.steer * Math.min(absSpd / 11, 1) * leanAmt;
-  s.roll += (targetRoll - s.roll) * Math.min(1, dt * 6.5);
+  const leanAmt = input.handbrake ? spec.lean * 1.3 : spec.lean;
+  const targetRoll = s.steer * Math.min(absSpd / 10.5, 1) * leanAmt;
+  s.roll += (targetRoll - s.roll) * Math.min(1, dt * 7);
   return yawRate;
 }
 

@@ -45,12 +45,21 @@ type Geos = {
 };
 
 const cache = new Map<string, Geos>();
+/** Bump when geometry layout changes so HMR does not reuse stale merged meshes. */
+const GEO_VER = "v3";
 
 const darker = (hex: string, k: number) => new THREE.Color(hex).multiplyScalar(k);
 const BODY_W = [0.86, 0.96, 1.12];
 const BODY_H = [1.02, 1, 0.98];
 /** Extra head scale for a cuter, slightly chibi silhouette. */
-const HEAD_SCALE = 1.22;
+const HEAD_SCALE = 1.18;
+/** Hip joint height in body space — soles of shoes sit on y=0. */
+export const HIP_Y = 0.82;
+/**
+ * When parenting the rig into a vehicle seat, subtract this from seat.y so the
+ * seated hip lands on the cushion (accounts for seated bodyY dip ≈ 0.14).
+ */
+export const SEAT_HIP_OFFSET = 0.68;
 
 function buildGeos(look: Look): Geos {
   const bw = BODY_W[look.body];
@@ -66,8 +75,8 @@ function buildGeos(look: Look): Geos {
   const b = look.bottom;
   const longSleeve = t === 1 || t === 2 || t === 3 || t === 6;
   const saree = t === 4;
-  const hips = 0.9;
-  const shoulder = 1.38;
+  const hips = HIP_Y;
+  const shoulder = 1.32;
   const torsoW = (t === 2 ? 0.2 : 0.185) * bw;
 
   // ---- torso (absolute body space, y up from the ground) ----
@@ -128,49 +137,45 @@ function buildGeos(look: Look): Geos {
     tg.box(0.022, 0.26, 0.035, "#22313f", { pos: [0.09 * bw, 1.2, 0.07 * bw] });
   }
 
-  // ---- head (cute + proper: rounder skull, big soft eyes, gentle smile) ----
+  // ---- head: round skull; face sits on the front (HEAD_SCALE applied later) ----
   const hg = new GeoBuilder();
-  const hc = 0.168;
-  // Round skull + soft jaw (less egg, more plush)
-  hg.sphere(0.152, skin, { pos: [0, hc + 0.01, 0], scale: [0.98, 1.05, 1.0] }, 22);
-  hg.sphere(0.118, skin, { pos: [0, hc - 0.045, 0.02], scale: [1.05, 0.85, 0.95] }, 16);
-  // Apple cheeks + blush
-  hg.sphere(0.055, skin, { pos: [0.088, hc - 0.028, 0.078], scale: [0.85, 0.9, 0.8] }, 12);
-  hg.sphere(0.055, skin, { pos: [-0.088, hc - 0.028, 0.078], scale: [0.85, 0.9, 0.8] }, 12);
-  hg.sphere(0.032, skinWarm, { pos: [0.082, hc - 0.032, 0.1], scale: [1.1, 0.7, 0.55] }, 10);
-  hg.sphere(0.032, skinWarm, { pos: [-0.082, hc - 0.032, 0.1], scale: [1.1, 0.7, 0.55] }, 10);
-  // Tiny soft nose
-  hg.sphere(0.022, skinShade, { pos: [0, hc - 0.012, 0.138], scale: [0.85, 0.95, 1.15] }, 10);
-  // Cute ears
-  hg.sphere(0.036, skin, { pos: [0.142, hc + 0.005, -0.01], scale: [0.42, 1.05, 0.85] }, 10);
-  hg.sphere(0.036, skin, { pos: [-0.142, hc + 0.005, -0.01], scale: [0.42, 1.05, 0.85] }, 10);
+  const hc = 0.155;
+  const skullR = 0.148;
+  // Slightly flatter front so features can sit on the face without a “pop-eye” profile
+  hg.sphere(skullR, skin, { pos: [0, hc + 0.008, 0], scale: [0.98, 1.04, 0.94] }, 22);
+  hg.sphere(0.112, skin, { pos: [0, hc - 0.042, 0.012], scale: [1.02, 0.82, 0.88] }, 16);
+  // Cheeks + soft blush
+  hg.sphere(0.048, skin, { pos: [0.078, hc - 0.022, 0.06], scale: [0.8, 0.85, 0.65] }, 12);
+  hg.sphere(0.048, skin, { pos: [-0.078, hc - 0.022, 0.06], scale: [0.8, 0.85, 0.65] }, 12);
+  hg.sphere(0.028, skinWarm, { pos: [0.072, hc - 0.028, 0.1], scale: [1.05, 0.65, 0.35] }, 8);
+  hg.sphere(0.028, skinWarm, { pos: [-0.072, hc - 0.028, 0.1], scale: [1.05, 0.65, 0.35] }, 8);
+  // Face plane ≈ front of scaled skull (0.148 * 0.94 ≈ 0.139)
+  const faceZ = 0.136;
+  // Tiny nose
+  hg.sphere(0.015, skinShade, { pos: [0, hc - 0.006, faceZ + 0.006], scale: [0.75, 0.85, 0.55] }, 8);
+  // Ears
+  hg.sphere(0.034, skin, { pos: [0.138, hc + 0.002, -0.008], scale: [0.4, 1.0, 0.8] }, 10);
+  hg.sphere(0.034, skin, { pos: [-0.138, hc + 0.002, -0.008], scale: [0.4, 1.0, 0.8] }, 10);
 
-  // Big soft eyes pushed forward so they read clearly in preview + game
+  // Eyes — shallow discs on the face plane (readable front-on, clean in profile)
   for (const sx of [1, -1] as const) {
-    const ex = sx * 0.048;
-    const ey = hc + 0.032;
-    const ez = 0.132;
-    // White of the eye — wide & tall (cute)
-    hg.sphere(0.036, "#fffaf4", { pos: [ex, ey, ez], scale: [1.2, 1.35, 0.62] }, 14);
-    // Warm brown iris + pupil
-    hg.sphere(0.02, "#6b4228", { pos: [ex, ey - 0.002, ez + 0.014], scale: [1.05, 1.12, 0.8] }, 12);
-    hg.sphere(0.012, "#3a2416", { pos: [ex, ey - 0.002, ez + 0.022], scale: [1, 1.05, 0.85] }, 8);
-    hg.sphere(0.007, "#0c0806", { pos: [ex, ey - 0.002, ez + 0.028] }, 6);
-    // Catchlights
-    hg.sphere(0.0055, "#ffffff", { pos: [ex - sx * 0.007, ey + 0.01, ez + 0.032] }, 5);
-    hg.sphere(0.003, "#ffffff", { pos: [ex + sx * 0.006, ey - 0.006, ez + 0.03] }, 4);
-    // Soft upper lid (skin, not hair — avoids “black dots”)
-    hg.sphere(0.034, darker(skin, 0.9), { pos: [ex, ey + 0.022, ez - 0.004], scale: [1.15, 0.38, 0.55] }, 10);
+    const ex = sx * 0.044;
+    const ey = hc + 0.028;
+    hg.sphere(0.032, "#fffaf4", { pos: [ex, ey, faceZ], scale: [1.15, 1.28, 0.42] }, 12);
+    hg.sphere(0.017, "#6b4228", { pos: [ex, ey - 0.001, faceZ + 0.008], scale: [1.0, 1.08, 0.45] }, 10);
+    hg.sphere(0.009, "#1a1008", { pos: [ex, ey - 0.001, faceZ + 0.012], scale: [1, 1.02, 0.5] }, 6);
+    hg.sphere(0.0045, "#ffffff", { pos: [ex - sx * 0.006, ey + 0.008, faceZ + 0.014] }, 4);
+    hg.sphere(0.03, darker(skin, 0.92), { pos: [ex, ey + 0.02, faceZ - 0.004], scale: [1.12, 0.32, 0.4] }, 8);
   }
 
-  // Soft arched brows — above the eyes, not over them
-  hg.sphere(0.026, darker(hair, 0.65), { pos: [0.052, hc + 0.078, 0.122], scale: [1.6, 0.26, 0.32], rot: [0, 0, -0.2] }, 8);
-  hg.sphere(0.026, darker(hair, 0.65), { pos: [-0.052, hc + 0.078, 0.122], scale: [1.6, 0.26, 0.32], rot: [0, 0, 0.2] }, 8);
+  // Brows
+  hg.sphere(0.022, darker(hair, 0.7), { pos: [0.048, hc + 0.068, faceZ - 0.01], scale: [1.55, 0.22, 0.22], rot: [0, 0, -0.18] }, 6);
+  hg.sphere(0.022, darker(hair, 0.7), { pos: [-0.048, hc + 0.068, faceZ - 0.01], scale: [1.55, 0.22, 0.22], rot: [0, 0, 0.18] }, 6);
 
-  // Gentle smile
-  hg.sphere(0.022, "#c45c5c", { pos: [0.018, hc - 0.07, 0.138], scale: [1.35, 0.42, 0.5], rot: [0.12, 0, 0.28] }, 8);
-  hg.sphere(0.022, "#c45c5c", { pos: [-0.018, hc - 0.07, 0.138], scale: [1.35, 0.42, 0.5], rot: [0.12, 0, -0.28] }, 8);
-  hg.sphere(0.014, "#e88a8a", { pos: [0, hc - 0.066, 0.142], scale: [1.5, 0.32, 0.45] }, 6);
+  // Closed smile — on the face plane, not a protruding tongue
+  hg.sphere(0.024, "#b84a4a", { pos: [0, hc - 0.06, faceZ], scale: [1.6, 0.22, 0.28] }, 8);
+  hg.sphere(0.011, "#d97878", { pos: [0.02, hc - 0.056, faceZ + 0.002], scale: [1.1, 0.35, 0.28], rot: [0, 0, 0.35] }, 6);
+  hg.sphere(0.011, "#d97878", { pos: [-0.02, hc - 0.056, faceZ + 0.002], scale: [1.1, 0.35, 0.28], rot: [0, 0, -0.35] }, 6);
 
   const cap = (r: number, color: string, rotX = -0.28, y = 0.018, cover = 0.58) =>
     hg.add(new THREE.SphereGeometry(r, 16, 12, 0, Math.PI * 2, 0, Math.PI * cover), color, {
@@ -237,16 +242,16 @@ function buildGeos(look: Look): Geos {
       break;
   }
   if (look.acc & 1) {
-    hg.torus(0.04, 0.005, "#1a1a1a", { pos: [0.054, hc + 0.026, 0.132] });
-    hg.torus(0.04, 0.005, "#1a1a1a", { pos: [-0.054, hc + 0.026, 0.132] });
-    hg.box(0.042, 0.005, 0.005, "#1a1a1a", { pos: [0, hc + 0.034, 0.134] });
+    hg.torus(0.038, 0.005, "#1a1a1a", { pos: [0.048, hc + 0.026, faceZ + 0.002] });
+    hg.torus(0.038, 0.005, "#1a1a1a", { pos: [-0.048, hc + 0.026, faceZ + 0.002] });
+    hg.box(0.04, 0.005, 0.005, "#1a1a1a", { pos: [0, hc + 0.032, faceZ + 0.003] });
   }
   if (look.acc & 8) {
     hg.torus(0.162, 0.012, "#1b1b1b", { pos: [0, hc + 0.02, 0], rot: [0, Math.PI / 2, 0] });
     hg.cyl(0.052, 0.052, 0.04, "#1b1b1b", { pos: [0.155, hc, 0], rot: [0, 0, Math.PI / 2] }, 12);
     hg.cyl(0.052, 0.052, 0.04, "#1b1b1b", { pos: [-0.155, hc, 0], rot: [0, 0, Math.PI / 2] }, 12);
   }
-  if (look.acc & 16) hg.sphere(0.012, "#c1121f", { pos: [0, hc + 0.078, 0.14] }, 8);
+  if (look.acc & 16) hg.sphere(0.01, "#c1121f", { pos: [0, hc + 0.07, faceZ + 0.004] }, 8);
   if (look.acc & 32) {
     hg.add(
       new THREE.SphereGeometry(0.155, 16, 10, 0, Math.PI * 2, Math.PI * 0.58, Math.PI * 0.42),
@@ -259,46 +264,47 @@ function buildGeos(look: Look): Geos {
     hg.torus(0.02, 0.0045, "#e2b64a", { pos: [-0.138, hc - 0.015, 0.02], rot: [0, 0, Math.PI / 2] });
   }
 
-  // ---- limbs (softer, fuller — less stick-figure) ----
+  // ---- limbs (fuller, grounded — soles land at y≈0 with HIP_Y) ----
   const armR = (t === 2 ? 0.055 : 0.05) * Math.sqrt(bw);
   const ua = new GeoBuilder();
-  ua.capsule(armR, 0.17, longSleeve || saree ? top : top, { pos: [0, -0.135, 0] });
+  ua.capsule(armR, 0.16, longSleeve || saree ? top : top, { pos: [0, -0.125, 0] });
   const fa = new GeoBuilder();
   const foreCol = longSleeve ? top : skin;
-  fa.capsule(armR * 0.96, 0.15, foreCol, { pos: [0, -0.115, 0] });
+  fa.capsule(armR * 0.96, 0.14, foreCol, { pos: [0, -0.11, 0] });
   if (look.acc & 64) {
-    fa.torus(0.044, 0.008, "#c9a227", { pos: [0, -0.2, 0], rot: [Math.PI / 2, 0, 0] });
-    fa.box(0.026, 0.016, 0.006, "#1a1a1a", { pos: [0, -0.2, 0.042] });
+    fa.torus(0.044, 0.008, "#c9a227", { pos: [0, -0.19, 0], rot: [Math.PI / 2, 0, 0] });
+    fa.box(0.026, 0.016, 0.006, "#1a1a1a", { pos: [0, -0.19, 0.042] });
   }
   // Soft rounded hand
-  fa.sphere(0.042, skin, { pos: [0, -0.248, 0.012], scale: [1.05, 0.9, 0.95] }, 10);
-  fa.sphere(0.028, skin, { pos: [0, -0.29, 0.025], scale: [1.35, 0.7, 0.85] }, 8);
+  fa.sphere(0.04, skin, { pos: [0, -0.235, 0.01], scale: [1.05, 0.9, 0.95] }, 10);
+  fa.sphere(0.026, skin, { pos: [0, -0.275, 0.022], scale: [1.3, 0.7, 0.85] }, 8);
   for (let f = 0; f < 4; f += 1) {
-    const fx = (f - 1.5) * 0.014;
-    fa.capsule(0.0075, 0.024, skin, { pos: [fx, -0.325, 0.032] });
+    const fx = (f - 1.5) * 0.013;
+    fa.capsule(0.007, 0.022, skin, { pos: [fx, -0.308, 0.028] });
   }
-  fa.capsule(0.0085, 0.02, skin, { pos: [0.032, -0.29, 0.012], rot: [0, 0, 0.85] });
+  fa.capsule(0.008, 0.018, skin, { pos: [0.03, -0.275, 0.01], rot: [0, 0, 0.85] });
 
-  const legR = (b === 5 ? 0.068 : 0.06) * Math.sqrt(bw);
+  const legR = (b === 5 ? 0.07 : 0.062) * Math.sqrt(bw);
   const longLeg = b === 0 || b === 1 || b === 5;
   const thighCol = longLeg || b === 2 ? bottom : skin;
   const shinCol = longLeg ? bottom : skin;
   const th = new GeoBuilder();
-  th.capsule(legR * 1.12, 0.28, saree ? skin : thighCol, { pos: [0, -0.19, 0] });
+  th.capsule(legR * 1.15, 0.26, saree ? skin : thighCol, { pos: [0, -0.175, 0] });
   const sh = new GeoBuilder();
-  sh.capsule(legR * (b === 5 ? 1.05 : 0.95), 0.26, saree ? skin : shinCol, { pos: [0, -0.17, 0] });
+  sh.capsule(legR * (b === 5 ? 1.08 : 0.98), 0.24, saree ? skin : shinCol, { pos: [0, -0.16, 0] });
+  // Shoe sole bottoms ≈ -0.42 from knee; with HIP_Y=0.82 and knee at -0.4 → world y≈0
   const shoeStyle = look.shoe;
   if (shoeStyle === 2) {
-    sh.box(0.08, 0.016, 0.22, shoeCol, { pos: [0, -0.39, 0.04] });
-    sh.box(0.065, 0.01, 0.028, darker(shoeCol, 0.7), { pos: [0, -0.378, 0.065] });
-    sh.sphere(0.04, skin, { pos: [0, -0.37, -0.01], scale: [1.1, 0.9, 1] }, 8);
+    sh.box(0.08, 0.016, 0.22, shoeCol, { pos: [0, -0.405, 0.04] });
+    sh.box(0.065, 0.01, 0.028, darker(shoeCol, 0.7), { pos: [0, -0.393, 0.065] });
+    sh.sphere(0.038, skin, { pos: [0, -0.385, -0.01], scale: [1.1, 0.9, 1] }, 8);
   } else if (shoeStyle === 1) {
-    sh.box(0.09, 0.065, 0.23, shoeCol, { pos: [0, -0.37, 0.045] });
-    sh.sphere(0.045, shoeCol, { pos: [0, -0.37, 0.145], scale: [1, 0.75, 1] }, 8);
+    sh.box(0.09, 0.06, 0.23, shoeCol, { pos: [0, -0.385, 0.045] });
+    sh.sphere(0.042, shoeCol, { pos: [0, -0.385, 0.145], scale: [1, 0.75, 1] }, 8);
   } else {
-    sh.box(0.095, 0.065, 0.23, shoeCol, { pos: [0, -0.365, 0.045] });
-    sh.box(0.098, 0.018, 0.235, "#f4f4f4", { pos: [0, -0.392, 0.045] });
-    sh.sphere(0.048, shoeCol, { pos: [0, -0.365, 0.145], scale: [1, 0.75, 1] }, 8);
+    sh.box(0.095, 0.06, 0.23, shoeCol, { pos: [0, -0.38, 0.045] });
+    sh.box(0.098, 0.016, 0.235, "#f4f4f4", { pos: [0, -0.412, 0.045] });
+    sh.sphere(0.045, shoeCol, { pos: [0, -0.38, 0.145], scale: [1, 0.75, 1] }, 8);
   }
 
   const cup = new GeoBuilder();
@@ -313,14 +319,14 @@ function buildGeos(look: Look): Geos {
     thigh: th.build(),
     shin: sh.build(),
     cup: cup.build(),
-    height: (1.62 + 0.22 * HEAD_SCALE) * bh + (look.hair === 4 ? 0.1 : 0),
+    height: (1.52 + 0.2 * HEAD_SCALE) * bh + (look.hair === 4 ? 0.1 : 0),
     shoulder: torsoW + armR * 0.95,
     hipX: 0.088 * bw,
   };
 }
 
 export function buildRig(look: Look): Rig {
-  const key = lookKey(look);
+  const key = `${GEO_VER}:${lookKey(look)}`;
   let g = cache.get(key);
   if (!g) {
     if (cache.size > 80) cache.clear();
@@ -346,16 +352,16 @@ export function buildRig(look: Look): Rig {
 
   const torso = mesh(g.torso);
   body.add(torso);
-  const head = grp(0, 1.4);
+  const head = grp(0, 1.34);
   const headMesh = mesh(g.head);
   headMesh.scale.setScalar(HEAD_SCALE);
   head.add(headMesh);
   body.add(head);
 
-  const lArm = grp(g.shoulder, 1.35);
-  const rArm = grp(-g.shoulder, 1.35);
-  const lElbow = grp(0, -0.25);
-  const rElbow = grp(0, -0.25);
+  const lArm = grp(g.shoulder, 1.3);
+  const rArm = grp(-g.shoulder, 1.3);
+  const lElbow = grp(0, -0.24);
+  const rElbow = grp(0, -0.24);
   const arms = [mesh(g.upperArm), mesh(g.upperArm), mesh(g.foreArm), mesh(g.foreArm)];
   lArm.add(arms[0]);
   rArm.add(arms[1]);
@@ -371,8 +377,8 @@ export function buildRig(look: Look): Rig {
   cup.visible = false;
   rElbow.add(cup);
 
-  const lLeg = grp(g.hipX, 0.9);
-  const rLeg = grp(-g.hipX, 0.9);
+  const lLeg = grp(g.hipX, HIP_Y);
+  const rLeg = grp(-g.hipX, HIP_Y);
   const lKnee = grp(0, -0.4);
   const rKnee = grp(0, -0.4);
   const legs = [mesh(g.thigh), mesh(g.thigh), mesh(g.shin), mesh(g.shin)];
@@ -529,11 +535,11 @@ export function poseRig(rig: Rig, p: Pose, dt: number): void {
       T[J.headX] = k * 0.1;
     }
   } else {
-    // Seated: knees bent, hips lowered a touch.
+    // Seated: knees bent, hips lowered onto the cushion.
     const bike = p.seat >= SEAT.rider;
-    T[J.lLegX] = T[J.rLegX] = bike ? -1.05 : -1.5;
-    T[J.lKneeX] = T[J.rKneeX] = bike ? 1.15 : 1.55;
-    T[J.bodyY] = bike ? -0.1 : -0.17;
+    T[J.lLegX] = T[J.rLegX] = bike ? -1.05 : -1.45;
+    T[J.lKneeX] = T[J.rKneeX] = bike ? 1.15 : 1.5;
+    T[J.bodyY] = bike ? -0.08 : -0.14;
     T[J.bodyRX] = p.seat === SEAT.rider ? 0.18 : 0;
     if (p.seat === SEAT.steer) {
       T[J.lArmX] = T[J.rArmX] = -0.95;

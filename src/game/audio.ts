@@ -218,6 +218,32 @@ export function hitCue(power = 1): void {
   beep(ac, bus, { f: 60, at: 0.04, len: 0.12, type: "sine", vol: 0.7, lp: 200 });
 }
 
+/** Metal crunch for vehicle impacts — cheap 3-beep stack. */
+export function crashCue(power = 1): void {
+  const ac = context();
+  const dest = out();
+  if (!ac || !dest) return;
+  const bus = ac.createGain();
+  bus.gain.value = 0.16 * Math.min(1.5, power);
+  bus.connect(dest);
+  beep(ac, bus, { f: 55, at: 0, len: 0.14, type: "square", vol: 1, lp: 280 });
+  beep(ac, bus, { f: 140, at: 0.02, len: 0.08, type: "sawtooth", vol: 0.7, lp: 700 });
+  beep(ac, bus, { f: 38, at: 0.06, len: 0.2, type: "sine", vol: 0.85, lp: 160 });
+}
+
+/** Low sting when WASTED triggers. */
+export function wastedCue(): void {
+  const ac = context();
+  const dest = out();
+  if (!ac || !dest) return;
+  const bus = ac.createGain();
+  bus.gain.value = 0.2;
+  bus.connect(dest);
+  beep(ac, bus, { f: 90, at: 0, len: 0.35, type: "sine", vol: 0.9, lp: 400 });
+  beep(ac, bus, { f: 60, at: 0.08, len: 0.55, type: "triangle", vol: 0.7, lp: 220 });
+  beep(ac, bus, { f: 180, at: 0.2, len: 0.25, type: "sawtooth", vol: 0.35, lp: 500 });
+}
+
 /** Vehicle engine bed while driving. kind 0 stops it. */
 export function setEngine(kind: number, speed: number): void {
   const ac = context();

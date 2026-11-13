@@ -14,6 +14,8 @@ import { Lake } from "./Lake";
 import { MeetMarkers } from "./MeetMarkers";
 import { Metro } from "./Metro";
 import { Pedestrians } from "./Pedestrians";
+import { Police } from "./Police";
+import { ShadowSimGhost } from "./ShadowSimGhost";
 import { Traffic } from "./Traffic";
 
 type SceneProps = { city: CityData; name: string; look: Look };
@@ -31,9 +33,12 @@ export const Scene = memo(function Scene({ city, name, look }: SceneProps) {
       <Lake city={city} />
       <Traffic city={city} />
       <Pedestrians city={city} />
+      <Police city={city} />
       <RemotePlayers config={city.config} />
       <VoiceController />
       <PlayerController city={city} name={name} look={look} />
+      {/* Phase A: Rapier ghost auto — arcade remains authority. See docs/HLD.md */}
+      <ShadowSimGhost />
     </>
   );
 });

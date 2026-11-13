@@ -9,9 +9,10 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "check": "node --experimental-strip-types src/lib/collision.test.ts && node --experimental-strip-types src/world/generate.test.ts && node --experimental-strip-types src/world/meets.test.ts && node --experimental-strip-types src/game/onboarding.test.ts"
+    "check": "node --experimental-strip-types src/lib/collision.test.ts && node --experimental-strip-types src/world/generate.test.ts && node --experimental-strip-types src/world/meets.test.ts && node --experimental-strip-types src/game/onboarding.test.ts && node --experimental-strip-types src/game/crash.test.ts && node --experimental-strip-types packages/engine/src/physics/math3.test.ts && node --experimental-strip-types src/game/sim/pose-from-snap.test.ts && node --experimental-strip-types src/game/sim/chunk-pack.test.ts && node --experimental-strip-types src/game/input/foot-intent.test.ts && node --experimental-strip-types packages/network/src/protocol/pose-codec.test.ts && node --experimental-strip-types packages/network/src/interp/sample-remote.test.ts"
   },
   "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.14.0",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
     "next": "^16.4.6",

@@ -3,6 +3,9 @@ import { decodeLook, encodeLook, type Look } from "@/avatar/appearance";
 import { honk } from "@/game/audio";
 import { live, pendingHits, selfSay } from "@/game/runtime";
 import { useGame } from "@/game/store";
+import { isNetV2Enabled } from "@/game/sim/flags";
+import { decodePoseBase64Sync, disposeNetCodec, encodePoseBase64 } from "./net-codec";
+import { applyPoseToPeer } from "./pose-apply";
 import { openTransport, type Transport, type TransportKind, type Wire } from "./transport";
 import { setVoiceModeSender, voice } from "./voice";
 
@@ -60,7 +63,6 @@ let beat: ReturnType<typeof setInterval> | null = null;
 let chatSeq = 0;
 let session: { city: string; name: string; look: Look } | null = null;
 
-const SNAP_KEEP = 8;
 const STALE_MS = 9000;
 
 function newId(): string {
@@ -156,19 +158,27 @@ function onMessage(msg: Wire, kind: TransportKind) {
       const p = map.get(id);
       const a = msg.p;
       if (!p || !Array.isArray(a) || a.length < 8) break;
-      const x = Number(a[0]);
-      const z = Number(a[1]);
-      if (!Number.isFinite(x) || !Number.isFinite(z)) break;
-      p.snaps.push({ t: now, x, z, yaw: Number(a[2]) || 0, speed: Number(a[3]) || 0 });
-      if (p.snaps.length > SNAP_KEEP) p.snaps.shift();
-      p.veh = Math.min(3, Math.max(0, Number(a[4]) | 0));
-      p.seat = Math.min(5, Math.max(0, Number(a[5]) | 0));
-      const emote = Math.min(6, Math.max(0, Number(a[6]) | 0));
-      if (emote !== p.emote) p.emoteStart = now;
-      p.emote = emote;
-      p.rideWith = typeof a[7] === "string" ? a[7] : null;
-      p.passenger = p.rideWith !== null;
-      p.lastSeen = now;
+      applyPoseToPeer(
+        p,
+        {
+          x: Number(a[0]),
+          z: Number(a[1]),
+          yaw: Number(a[2]) || 0,
+          speed: Number(a[3]) || 0,
+          veh: Number(a[4]) | 0,
+          seat: Number(a[5]) | 0,
+          emote: Number(a[6]) | 0,
+          rideWith: typeof a[7] === "string" ? a[7] : null,
+        },
+        now,
+      );
+      break;
+    }
+    case "sb": {
+      const p = map.get(id);
+      if (!p || typeof msg.b !== "string") break;
+      const fields = decodePoseBase64Sync(msg.b);
+      if (fields) applyPoseToPeer(p, fields, now);
       break;
     }
     case "hit": {
@@ -275,6 +285,7 @@ export function disconnect(): void {
   if (sweep) clearInterval(sweep);
   if (beat) clearInterval(beat);
   sweep = beat = null;
+  disposeNetCodec();
   useNet.setState({ status: "idle", peerMap: new Map(), peerIds: [] });
 }
 
@@ -282,10 +293,29 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
 
 export function sendState(): void {
   if (!transport) return;
+  if (isNetV2Enabled()) {
+    void sendStateBinary();
+    return;
+  }
   transport.send({
     t: "s",
     p: [r2(live.x), r2(live.z), r2(live.yaw), r2(live.speed), live.vehicle, live.seat, live.emote, live.rideWith ?? 0],
   });
+}
+
+async function sendStateBinary(): Promise<void> {
+  if (!transport) return;
+  const b = await encodePoseBase64({
+    x: live.x,
+    z: live.z,
+    yaw: live.yaw,
+    speed: live.speed,
+    veh: live.vehicle,
+    seat: live.seat,
+    emote: live.emote,
+    rideWith: live.rideWith,
+  });
+  transport.send({ t: "sb", b });
 }
 
 export function sendHonk(): void {
