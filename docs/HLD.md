@@ -25,7 +25,7 @@
 | Fixed-step physics | `packages/engine` | Sim worker | Rapier only here |
 | Intent normalization | `packages/engine` `input/` | Main → worker | Thin |
 | Pose binary + Hermite | `packages/network` | Net worker / main | |
-| City gen / meets (legacy) | `src/world` → later `apps/web` | Main | Pure functions OK |
+| City gen / meets | `apps/web/src/world` | Main | Pure functions OK |
 | Mod manifests | `packages/mods` | Main | Data only |
 | Shared constants | `packages/shared` | Any | |
 
@@ -51,6 +51,20 @@
 **Phase D — Net v2** (`?netV2=1`) — see `docs/LLD-phase-d.md`
 
 - Binary `sb` poses, Hermite remotes, codec worker; relay still discovers / fans out.
+
+**Phase E — Social** (`?socialV2=1`) — see `docs/LLD-phase-e.md`
+
+- PositionalAudio voice, meet hangout sit anchors, IndexedDB business cards via relay `card`.
+
+**Phase F — Content** (`?contentV2=1`) — see `docs/LLD-phase-f.md`
+
+- 9-cell stream catalog for splat/GLB; declarative `?mod=` packs; HUD fullscreen for streamers.
+
+**Phase G — Monorepo** — see `docs/LLD-phase-g.md`
+
+- Client lives in `apps/web` (`@india-irl/web`); npm workspaces wire `packages/*`.
+
+**Deferred (post-playtest)** — OMem Tier-1 NPCs and moving Tier-2/3 ambient AI into the sim worker. v1 keeps seeded client-side peds/traffic (no cloud agent cost).
 
 ## 4. Error / isolation boundaries
 

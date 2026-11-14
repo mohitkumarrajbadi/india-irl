@@ -2,31 +2,23 @@
   "name": "india-irl",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "dev:web": "next dev",
+    "dev:web": "npm run dev -w @india-irl/web",
     "relay": "node server/relay.mjs",
-    "build": "next build",
-    "start": "next start",
-    "typecheck": "tsc --noEmit",
-    "check": "node --experimental-strip-types src/lib/collision.test.ts && node --experimental-strip-types src/world/generate.test.ts && node --experimental-strip-types src/world/meets.test.ts && node --experimental-strip-types src/game/onboarding.test.ts && node --experimental-strip-types src/game/crash.test.ts && node --experimental-strip-types packages/engine/src/physics/math3.test.ts && node --experimental-strip-types src/game/sim/pose-from-snap.test.ts && node --experimental-strip-types src/game/sim/chunk-pack.test.ts && node --experimental-strip-types src/game/input/foot-intent.test.ts && node --experimental-strip-types packages/network/src/protocol/pose-codec.test.ts && node --experimental-strip-types packages/network/src/interp/sample-remote.test.ts"
+    "build": "npm run build -w @india-irl/web",
+    "start": "npm run start -w @india-irl/web",
+    "typecheck": "npm run typecheck -w @india-irl/web",
+    "check": "node --experimental-strip-types apps/web/src/lib/collision.test.ts && node --experimental-strip-types apps/web/src/lib/obb.test.ts && node --experimental-strip-types apps/web/src/world/generate.test.ts && node --experimental-strip-types apps/web/src/world/meets.test.ts && node --experimental-strip-types apps/web/src/game/onboarding.test.ts && node --experimental-strip-types apps/web/src/game/crash.test.ts && node --experimental-strip-types apps/web/src/game/crash-feel.test.ts && node --experimental-strip-types apps/web/src/game/impact.test.ts && node --experimental-strip-types packages/engine/src/physics/math3.test.ts && node --experimental-strip-types apps/web/src/game/sim/pose-from-snap.test.ts && node --experimental-strip-types apps/web/src/game/sim/chunk-pack.test.ts && node --experimental-strip-types apps/web/src/game/input/foot-intent.test.ts && node --experimental-strip-types packages/network/src/protocol/pose-codec.test.ts && node --experimental-strip-types packages/network/src/interp/sample-remote.test.ts && node --experimental-strip-types apps/web/src/world/anchors.test.ts && node --experimental-strip-types packages/mods/src/validate.test.ts && node --experimental-strip-types apps/web/src/game/stream/catalog.test.ts"
   },
   "dependencies": {
-    "@dimforge/rapier3d-compat": "^0.14.0",
-    "@react-three/drei": "^10.7.9",
-    "@react-three/fiber": "^9.8.2",
-    "next": "^16.4.6",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1",
-    "three": "^0.187.0",
-    "ws": "^8.22.2",
-    "zustand": "^5.1.0"
+    "ws": "^8.22.2"
   },
   "devDependencies": {
-    "@types/node": "^26.6.6",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "@types/three": "^0.187.0",
     "@types/ws": "^8.18.2",
     "typescript": "^7.0.2"
   }

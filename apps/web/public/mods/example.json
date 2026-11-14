@@ -1,0 +1,9 @@
+{
+  "id": "example-pack",
+  "name": "Example Mod",
+  "version": "0.1.0",
+  "assets": [],
+  "anchors": [
+    { "id": "example-spot", "x": 32, "y": 0, "z": 32, "yaw": 0 }
+  ]
+}

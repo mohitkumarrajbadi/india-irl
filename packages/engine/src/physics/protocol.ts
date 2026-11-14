@@ -36,8 +36,14 @@ export type VehicleSpawn = {
 export type ChunkCollider = {
   cellX: number;
   cellZ: number;
-  /** Packed AABB list: minX,minY,minZ,maxX,maxY,maxZ per box. */
+  /** Obstacle AABBs: minX,minY,minZ,maxX,maxY,maxZ per box. */
   boxes: Float32Array;
+  /**
+   * Road surface trimesh (world space, Y ≈ 0) — aligns with splat / road meshes.
+   * `roadVerts`: xyz interleaved; `roadIndices`: triangle indices.
+   */
+  roadVerts?: Float32Array;
+  roadIndices?: Uint32Array;
 };
 
 /** Entity transform slot in SNAPSHOT SoA (floats). */

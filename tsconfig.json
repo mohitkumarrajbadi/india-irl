@@ -1,59 +1,12 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "react-jsx",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@india-irl/engine": [
-        "./packages/engine/src/index.ts"
-      ],
-      "@india-irl/engine/*": [
-        "./packages/engine/src/*"
-      ],
-      "@india-irl/shared": [
-        "./packages/shared/src/index.ts"
-      ],
-      "@india-irl/network": [
-        "./packages/network/src/index.ts"
-      ],
-      "@india-irl/network/*": [
-        "./packages/network/src/*"
-      ]
-    },
-    "allowImportingTsExtensions": true
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true
   },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "**/*.test.ts",
-    "server"
-  ]
+  "include": [],
+  "exclude": ["node_modules", "apps", "packages", "server"]
 }

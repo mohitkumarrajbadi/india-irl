@@ -1,5 +1,6 @@
 /** ENTER / EXIT / authority / impulse / remote pose commands. */
 import type { MainToSim } from "./protocol.ts";
+import { clearFailsafes } from "./failsafe.ts";
 import { quatFromYaw } from "./math3.ts";
 import type { WorkerRuntime } from "./sim-types.ts";
 
@@ -97,5 +98,6 @@ export function disposeRuntime(rt: WorkerRuntime): void {
   rt.stores.chars.clear();
   rt.stores.vehicles.clear();
   rt.stores.chunks.clear();
+  clearFailsafes();
   rt.ready = false;
 }

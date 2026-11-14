@@ -323,6 +323,36 @@ wss.on("connection", (ws) => {
         peer.send(payload);
         break;
       }
+    } else if (msg.t === "card") {
+      // Phase E business-card handshake — directed, nearby only.
+      const to = typeof msg.to === "string" && ID_RE.test(msg.to) ? msg.to : "";
+      if (!to) return;
+      const op = msg.op === "req" || msg.op === "offer" || msg.op === "deny" ? msg.op : null;
+      if (!op) return;
+      const fields =
+        op === "offer" && msg.fields && typeof msg.fields === "object"
+          ? {
+              linkedin: clean(msg.fields.linkedin, 120),
+              instagram: clean(msg.fields.instagram, 80),
+              whatsapp: clean(msg.fields.whatsapp, 32),
+              snapchat: clean(msg.fields.snapchat, 80),
+              status: clean(msg.fields.status, 140),
+            }
+          : undefined;
+      const payload = JSON.stringify({ t: "card", id, to, op, fields });
+      const fx = ws.meta.x;
+      const fz = ws.meta.z;
+      for (const peer of room) {
+        if (peer === ws || peer.readyState !== 1 || !peer.meta) continue;
+        if (peer.meta.id !== to) continue;
+        if (Number.isFinite(peer.meta.x) && Number.isFinite(fx)) {
+          const dx = peer.meta.x - fx;
+          const dz = peer.meta.z - fz;
+          if (dx * dx + dz * dz > 48 * 48) continue;
+        }
+        peer.send(payload);
+        break;
+      }
     } else if (msg.t === "vm") {
       ws.meta.micLive = !!msg.on;
       ws.tokens = Math.min(80, ws.tokens + 1);

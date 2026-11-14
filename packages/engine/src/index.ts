@@ -14,3 +14,11 @@ export { createIntent, intentToSimInput, type Intent } from "./input/unified.ts"
 export { RaycastVehicleController } from "./physics/vehicle-controller.ts";
 export { tuningFor, chassisHalfExtents } from "./physics/vehicle-tuning.ts";
 export { clamp, quatFromYaw } from "./physics/math3.ts";
+export { lerpPose, type PoseSample } from "./physics/pose-lerp.ts";
+export {
+  KILL_PLANE_Y,
+  ROAD_FRICTION,
+  ROAD_SURFACE_Y,
+  VEHICLE_FRICTION,
+} from "./physics/materials.ts";
+export { createSnapshotChannel } from "./physics/snapshot-channel.ts";

@@ -1,7 +1,11 @@
-# apps/web
+# `@india-irl/web`
 
-Target home for the Next.js + R3F client after migration from repo-root `src/`.
+Next.js + R3F client. Run from repo root:
 
-Until Phase 8 of `docs/TDD.md`, keep shipping from the root Next app.
+```bash
+npm run dev        # relay + this app
+npm run dev:web    # Next only
+npm run build
+```
 
-**Streamer UX:** expose a Fullscreen control (`document.documentElement.requestFullscreen()`). Capture/cast the browser tab — no Twitch/YouTube interactive API in v1.
+Feature flags and mods: see root `README.md` and `docs/LLD-phase-f.md`.

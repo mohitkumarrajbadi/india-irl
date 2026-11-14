@@ -15,7 +15,7 @@ Code must be **reviewable in one screen**, **testable in isolation**, and **name
 | `any` | Forbidden in engine/network packages |
 | Side effects | At edges only (workers, I/O, React mounts) |
 
-Existing debt (`PlayerController.tsx` ~1200 LOC) is **quarantined**: do not add features there. Extract sideways into `src/game/` or `packages/*` instead.
+Existing debt (`PlayerController.tsx` ~1200 LOC) is **quarantined**: do not add features there. Extract sideways into `apps/web/src/game/` or `packages/*` instead.
 
 ## Layering (dependency direction)
 

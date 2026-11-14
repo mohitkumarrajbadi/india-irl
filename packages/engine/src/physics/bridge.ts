@@ -66,8 +66,20 @@ export class SimBridge {
     this.send({ type: "SET_AUTHORITY", vehicleId, authority });
   }
 
-  loadChunk(cellX: number, cellZ: number, boxes: Float32Array): void {
-    this.send({ type: "LOAD_CHUNK", chunk: { cellX, cellZ, boxes } });
+  loadChunk(
+    cellX: number,
+    cellZ: number,
+    boxes: Float32Array,
+    roadVerts?: Float32Array,
+    roadIndices?: Uint32Array,
+  ): void {
+    const chunk = { cellX, cellZ, boxes, roadVerts, roadIndices };
+    const transfer: Transferable[] = [];
+    // Transfer ownership of packed buffers — zero GC churn at 60 Hz stream rates.
+    if (boxes.byteLength) transfer.push(boxes.buffer);
+    if (roadVerts?.byteLength) transfer.push(roadVerts.buffer);
+    if (roadIndices?.byteLength) transfer.push(roadIndices.buffer);
+    this.worker.postMessage({ type: "LOAD_CHUNK", chunk } satisfies MainToSim, transfer);
   }
 
   unloadChunk(cellX: number, cellZ: number): void {

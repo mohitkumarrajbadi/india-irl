@@ -24,7 +24,7 @@ Scripts:
 
 ## Cities
 
-Each city is generated from a seed by a pure function (`src/world/generate.ts`), so every player sees the same streets without sending any geometry over the network.
+Each city is generated from a seed by a pure function (`apps/web/src/world/generate.ts`), so every player sees the same streets without sending any geometry over the network.
 
 | City | Districts | Landmarks |
 | --- | --- | --- |
@@ -115,12 +115,12 @@ If the relay is not reachable the client falls back to `BroadcastChannel`, so tw
 
 ```
 server/        relay
-src/world/     deterministic city generator, configs, types
-src/gfx/       geometry builders, shaders, textures, day/night
-src/avatar/    look, rig, poses, actor
-src/vehicles/  models, drive physics, traffic AI
-src/net/       transport, store, interpolation
-src/components world, player, HUD, menu
+apps/web/src/world/     deterministic city generator, configs, types
+apps/web/src/gfx/       geometry builders, shaders, textures, day/night
+apps/web/src/avatar/    look, rig, poses, actor
+apps/web/src/vehicles/  models, drive physics, traffic AI
+apps/web/src/net/       transport, store, interpolation
+apps/web/src/components world, player, HUD, menu
 ```
 
 North is +Z and east is −X. One world unit is one meter.
@@ -142,12 +142,19 @@ North is +Z and east is −X. One world unit is one meter.
 
 **Net v2 (Phase D):** `?netV2=1` — binary poses + Hermite remotes + codec worker; relay unchanged for rooms. See `docs/LLD-phase-d.md`.
 
-Scaffold (not yet wired into `npm run dev`):
+**Social (Phase E):** `?socialV2=1` — 3D voice, sit at meet benches (E), business card (local IndexedDB). See `docs/LLD-phase-e.md`.
+
+**Content (Phase F):** `?contentV2=1` — stream splat/GLB by chunk; optional `?mod=/mods/example.json`; Fullscreen in the HUD dock. See `docs/LLD-phase-f.md`.
+
+**Deferred:** OMem / worker ambient AI — after playtest (see `docs/TDD.md` §7).
+
+Monorepo (`npm run dev` → relay + `@india-irl/web`):
 
 ```
+apps/web/           Next.js + R3F client
 packages/engine/    Rapier sim worker, raycast vehicles, input intent
-packages/network/   Hermite interp + future WebRTC worker
+packages/network/   Hermite interp + codec helpers
 packages/mods/      Declarative mod manifests (no peer JS)
 packages/shared/    Tick rates, VK, action ids
-apps/web/           Future Next/R3F home (migrates from src/)
+server/             WebSocket relay
 ```

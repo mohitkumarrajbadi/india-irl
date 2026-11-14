@@ -2,6 +2,7 @@
 import type RAPIER from "@dimforge/rapier3d-compat";
 import { TICK_DT } from "../../../shared/src/index.ts";
 import { stepCharacter } from "./character.ts";
+import { enforceKillPlane } from "./failsafe.ts";
 import { packSnapshot } from "./snapshot.ts";
 import type { PostFn, SimStores } from "./sim-types.ts";
 import { stepVehicles } from "./vehicle-step.ts";
@@ -28,6 +29,8 @@ export function fixedUpdate(
     post,
   });
   world.step();
+  // Kill-plane AFTER step — catches tunnel / NaN fall-throughs.
+  enforceKillPlane(stores.chars.values(), stores.vehicles.values());
   loop.tick += 1;
   stores.input.actions.length = 0;
   stores.input.jump = false;

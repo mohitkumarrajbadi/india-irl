@@ -1,6 +1,6 @@
 /**
  * Mod packs are declarative JSON + assets. No foreign JS executes in peer tabs.
- * Minigames may use sandboxed iframes with a narrow postMessage API.
+ * Minigames may use sandboxed iframes with a narrow postMessage API (later).
  */
 
 export type ModAsset =
@@ -26,3 +26,6 @@ export function assertSafeModUrl(url: string, allowHosts: readonly string[]): bo
     return false;
   }
 }
+
+export { parseManifestJson, type ValidateResult } from "./validate.ts";
+export { loadModManifest } from "./load.ts";

@@ -226,10 +226,10 @@ Mods are **data packs**, not peer-executed JS:
 3. **Phase B polish** — chunk collider stream + IMPACT (done).
 4. **Phase C** — `?simCore=1` snapshot foot+drive cutover (done); arcade cold fallback only.
 5. **Phase D** — `?netV2=1` binary pose + Hermite + codec worker; relay kept (done). See `docs/LLD-phase-d.md`.
-6. PositionalAudio voice; hangout anchors; business-card DC.
-7. Tier-2/3 AI in worker; Tier-1 OMem gateway behind feature flag.
-8. Chunk splat streaming + mod manifest loader.
-9. Migrate `src/` → `apps/web`; enable npm workspaces; fullscreen UX polish.
+6. **Phase E** — `?socialV2=1` PositionalAudio + hangouts + business cards (done). See `docs/LLD-phase-e.md`.
+7. ~~Tier-2/3 AI in worker; Tier-1 OMem gateway~~ — **deferred until after playtest**. Keep current client-side seeded peds/traffic (no cloud cost). OMem / worker AI is a post-test add-on, not v1.
+8. **Phase F** — `?contentV2=1` chunk splat/GLB streaming + mod manifests + fullscreen HUD (done). See `docs/LLD-phase-f.md`.
+9. **Phase G** — `apps/web` + npm workspaces (done). See `docs/LLD-phase-g.md`.
 
 ---
 
@@ -239,3 +239,5 @@ Mods are **data packs**, not peer-executed JS:
 - Full SFU for 50+ voice in one plaza (cap mesh; SFU later)  
 - Authoritative server physics for all entities  
 - Running untrusted mod JavaScript inside other players’ tabs  
+- **OMem / paid NPC intelligence and moving ambient AI into the sim worker** — revisit after testing (roadmap §7 deferred)  
+

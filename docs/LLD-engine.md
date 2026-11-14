@@ -20,16 +20,20 @@ physics/
   vehicle-controller.ts  # RaycastVehicleController
   vehicle-step.ts        # tick vehicles + IMPACT
   character.ts           # CharState + stepCharacter
-  chunks.ts              # load/unload AABB chunks
+  chunks.ts              # load/unload AABB + road trimesh chunks
+  materials.ts           # friction / restitution / kill-plane constants
+  failsafe.ts            # last-valid pose + Y=-100 reset (post-step)
+  pose-lerp.ts           # pure pose interpolation (main thread)
+  snapshot-channel.ts    # optional SharedArrayBuffer snapshot ring
   snapshot.ts            # pack SNAPSHOT SoA
   sim-types.ts           # WorkerRuntime / stores types
-  sim-spawn.ts           # spawn character / vehicle
+  sim-spawn.ts           # spawn character / vehicle (CCD on vehicles)
   sim-vehicle-cmds.ts    # enter/exit/impulse/mirror/dispose
   sim-handlers.ts        # INIT + message switch
-  world-loop.ts          # fixedUpdate + rAF accumulator
+  world-loop.ts          # fixedUpdate + rAF accumulator + kill-plane
   sim-worker.ts          # thin onmessage entry (package)
   bridge-decode.ts       # Float32 → SnapshotEntity[]
-  bridge.ts              # main-thread SimBridge API
+  bridge.ts              # main-thread SimBridge API (transferable chunks)
 input/
   unified.ts             # Intent ↔ SimInput
 ```

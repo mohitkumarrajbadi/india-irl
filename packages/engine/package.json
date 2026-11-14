@@ -6,7 +6,10 @@
   "exports": {
     ".": "./src/index.ts",
     "./physics/bridge": "./src/physics/bridge.ts",
-    "./physics/protocol": "./src/physics/protocol.ts"
+    "./physics/protocol": "./src/physics/protocol.ts",
+    "./physics/materials": "./src/physics/materials.ts",
+    "./physics/pose-lerp": "./src/physics/pose-lerp.ts",
+    "./physics/snapshot-channel": "./src/physics/snapshot-channel.ts"
   },
   "peerDependencies": {
     "@dimforge/rapier3d-compat": "^0.14.0"

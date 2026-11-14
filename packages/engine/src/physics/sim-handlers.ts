@@ -97,7 +97,17 @@ export function handleMessage(rt: WorkerRuntime, msg: MainToSim): void {
     }
     case "LOAD_CHUNK":
       if (rt.world && rt.rapier) {
-        loadChunk(rt.rapier, rt.world, rt.stores.chunks, msg.chunk.cellX, msg.chunk.cellZ, msg.chunk.boxes);
+        const c = msg.chunk;
+        loadChunk(
+          rt.rapier,
+          rt.world,
+          rt.stores.chunks,
+          c.cellX,
+          c.cellZ,
+          c.boxes,
+          c.roadVerts,
+          c.roadIndices,
+        );
       }
       break;
     case "UNLOAD_CHUNK":
