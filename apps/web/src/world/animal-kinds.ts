@@ -11,6 +11,8 @@ export type Animal = {
   scale: number;
   x: number;
   z: number;
+  /** Cached ground height — refreshed while awake. */
+  y: number;
   yaw: number;
   speed: number;
   phase: number;

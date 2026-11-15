@@ -21,4 +21,5 @@ export type {
   Sign,
   TrailKind,
   TrailRoad,
+  Flyover,
 } from "./types-data";

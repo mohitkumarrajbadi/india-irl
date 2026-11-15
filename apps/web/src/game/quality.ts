@@ -14,6 +14,10 @@ export { QUALITY_PRESETS } from "./quality-presets";
 
 const STORAGE = "india-irl:quality:v1";
 
+/** Hysteresis so auto mode does not thrash every sample. */
+let lowStreak = 0;
+let highStreak = 0;
+
 function weakDevice(): boolean {
   if (typeof navigator === "undefined") return false;
   const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
@@ -23,11 +27,13 @@ function weakDevice(): boolean {
   if (mem !== undefined && mem <= 4) return true;
   if (cores <= 4 && touch) return true;
   if (touch && dpr >= 2.5) return true;
+  if (cores <= 4) return true;
   return false;
 }
 
 export function detectDefaultPreference(): QualityId {
-  return weakDevice() ? "auto" : "high";
+  // Prefer auto so measured FPS can keep the session near 60
+  return "auto";
 }
 
 export function resolveQuality(preference: QualityId, hint?: Exclude<QualityId, "auto">): QualitySettings {
@@ -58,13 +64,15 @@ export function saveQualityPreference(id: QualityId): void {
 
 /** Mutable singleton read every frame by Atmosphere / Actor / Traffic. */
 export const quality: QualityState = {
-  preference: "high",
-  active: QUALITY_PRESETS.high,
+  preference: "auto",
+  active: QUALITY_PRESETS.medium,
 };
 
 export function applyQuality(preference: QualityId, hint?: Exclude<QualityId, "auto">): QualitySettings {
   quality.preference = preference;
   quality.active = resolveQuality(preference, hint);
+  lowStreak = 0;
+  highStreak = 0;
   saveQualityPreference(preference);
   return quality.active;
 }
@@ -75,16 +83,29 @@ export function cycleQuality(): QualitySettings {
   return applyQuality(order[(i + 1) % order.length]);
 }
 
-/** Auto mode: demote if FPS stays low, promote if it stays high. */
+/** Auto mode: demote under ~50fps, promote only when solidly near 60. */
 export function noteFps(fps: number): void {
   if (quality.preference !== "auto") return;
   const cur = quality.active.id;
-  if (fps > 0 && fps < 36) {
-    if (cur === "high") quality.active = QUALITY_PRESETS.medium;
-    else if (cur === "medium") quality.active = QUALITY_PRESETS.low;
-  } else if (fps >= 56) {
-    if (cur === "low") quality.active = QUALITY_PRESETS.medium;
-    else if (cur === "medium" && !weakDevice()) quality.active = QUALITY_PRESETS.high;
+  if (fps > 0 && fps < 50) {
+    lowStreak += 1;
+    highStreak = 0;
+    if (lowStreak >= 2) {
+      lowStreak = 0;
+      if (cur === "high") quality.active = QUALITY_PRESETS.medium;
+      else if (cur === "medium") quality.active = QUALITY_PRESETS.low;
+    }
+  } else if (fps >= 58) {
+    highStreak += 1;
+    lowStreak = 0;
+    if (highStreak >= 4) {
+      highStreak = 0;
+      if (cur === "low") quality.active = QUALITY_PRESETS.medium;
+      else if (cur === "medium" && !weakDevice()) quality.active = QUALITY_PRESETS.high;
+    }
+  } else {
+    lowStreak = 0;
+    highStreak = 0;
   }
 }
 

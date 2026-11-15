@@ -68,6 +68,16 @@ export type TrailRoad = {
   points: { x: number; z: number }[];
 };
 
+/** Elevated arterial deck — pillars collide; deck is driveable at deckY. */
+export type Flyover = {
+  x: number;
+  half: number;
+  z0: number;
+  z1: number;
+  deckY: number;
+  pillars: { x: number; z: number }[];
+};
+
 export type Prop = { x: number; z: number; rot: number; s: number; v: number };
 
 export type CityData = {
@@ -101,6 +111,8 @@ export type CityData = {
   circles: Circle[];
   /** Village dirt tracks + hill switchbacks draped on the apron. */
   trails: TrailRoad[];
+  /** Optional elevated arterial; null if city has no suitable span. */
+  flyover: Flyover | null;
   bounds: Rect;
   spawn: { x: number; z: number; yaw: number };
 };

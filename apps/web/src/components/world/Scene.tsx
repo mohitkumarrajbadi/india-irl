@@ -11,6 +11,7 @@ import { Atmosphere } from "./Atmosphere";
 import { CityBuildings } from "./CityBuildings";
 import { CityGround } from "./CityGround";
 import { CityProps } from "./CityProps";
+import { FlyoverMesh } from "./Flyover";
 import { Lake } from "./Lake";
 import { MeetMarkers } from "./MeetMarkers";
 import { Metro } from "./Metro";
@@ -34,6 +35,7 @@ export const Scene = memo(function Scene({ city, name, look }: SceneProps) {
       <Rain />
       <TerrainMesh city={city} />
       <TrailRoads city={city} />
+      <FlyoverMesh city={city} />
       <CityGround city={city} />
       <CityBuildings city={city} />
       <CityProps city={city} />

@@ -1,16 +1,14 @@
-/** Nearest trail-road query for drive / surface sampling. */
+/** Nearest trail-road query for drive / surface sampling (spatially hashed). */
+import { queryTrailCells, trailIndexFor } from "./trail-index.ts";
 import type { CityData, TrailRoad } from "./types.ts";
 
 export type TrailHit = {
   trail: TrailRoad;
-  /** Distance to centerline. */
   dist: number;
-  /** Closest point on centerline. */
   x: number;
   z: number;
 };
 
-/** Closest point on segment A→B to P. */
 function closestOnSeg(
   px: number,
   pz: number,
@@ -26,24 +24,24 @@ function closestOnSeg(
   t = t < 0 ? 0 : t > 1 ? 1 : t;
   const x = ax + abx * t;
   const z = az + abz * t;
-  return { x, z, d: Math.hypot(px - x, pz - z) };
+  const dx = px - x;
+  const dz = pz - z;
+  return { x, z, d: Math.sqrt(dx * dx + dz * dz) };
 }
 
 export function nearestTrail(city: CityData, x: number, z: number, maxDist = 14): TrailHit | null {
   const trails = city.trails;
   if (!trails?.length) return null;
+  const index = trailIndexFor(city);
+  const refs = queryTrailCells(index, x, z, maxDist);
   let best: TrailHit | null = null;
-  for (const trail of trails) {
-    const pts = trail.points;
-    for (let i = 0; i < pts.length - 1; i += 1) {
-      const a = pts[i]!;
-      const b = pts[i + 1]!;
-      const hit = closestOnSeg(x, z, a.x, a.z, b.x, b.z);
-      if (hit.d > maxDist) continue;
-      if (!best || hit.d < best.dist) {
-        best = { trail, dist: hit.d, x: hit.x, z: hit.z };
-      }
-    }
+  for (const ref of refs) {
+    const trail = trails[ref.ti]!;
+    const a = trail.points[ref.si]!;
+    const b = trail.points[ref.si + 1]!;
+    const hit = closestOnSeg(x, z, a.x, a.z, b.x, b.z);
+    if (hit.d > maxDist) continue;
+    if (!best || hit.d < best.dist) best = { trail, dist: hit.d, x: hit.x, z: hit.z };
   }
   return best;
 }

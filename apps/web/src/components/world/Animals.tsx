@@ -1,19 +1,20 @@
 "use client";
 
 import { useFrame } from "@react-three/fiber";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { vertexMat } from "@/gfx/geo";
 import { makeInstanced } from "@/gfx/instancing";
 import { cow, goat, streetDog } from "@/gfx/props";
 import { live, runtime } from "@/game/runtime";
 import { quality } from "@/game/quality";
-import { AnimalSim } from "@/world/animals";
+import { AnimalSim, type Animal } from "@/world/animals";
 import type { CityData } from "@/world/types";
 import { COW_TINTS, DOG_TINTS, GOAT_TINTS } from "./city-props-ctx";
 
 /** Animated cows / dogs / goats seeded from city placements. */
 export function Animals({ city }: { city: CityData }) {
+  const frame = useRef(0);
   const set = useMemo(() => {
     const sim = new AnimalSim(city);
     const cows = sim.animals.filter((a) => a.kind === 0);
@@ -60,9 +61,11 @@ export function Animals({ city }: { city: CityData }) {
     const dt = Math.min(delta, 0.05);
     const veh = live.vehicle > 0 ? live.speed : 0;
     set.sim.update(dt, live.x, live.z, veh);
-    writeKind(set.cowMesh, set.cows);
-    writeKind(set.dogMesh, set.dogs);
-    writeKind(set.goatMesh, set.goats);
+    frame.current += 1;
+    const full = (frame.current & 7) === 0;
+    writeKind(set.cowMesh, set.cows, live.x, live.z, full);
+    writeKind(set.dogMesh, set.dogs, live.x, live.z, full);
+    writeKind(set.goatMesh, set.goats, live.x, live.z, full);
   });
 
   return (
@@ -74,13 +77,21 @@ export function Animals({ city }: { city: CityData }) {
   );
 }
 
+const NEAR2 = 110 * 110;
+
 function writeKind(
   mesh: THREE.InstancedMesh,
-  list: { x: number; z: number; yaw: number; scale: number; phase: number; mood: string; speed: number }[],
+  list: Animal[],
+  px: number,
+  pz: number,
+  full: boolean,
 ): void {
   const e = mesh.instanceMatrix.array as Float32Array;
   for (let i = 0; i < list.length; i += 1) {
     const a = list[i]!;
+    const dx = a.x - px;
+    const dz = a.z - pz;
+    if (!full && dx * dx + dz * dz > NEAR2) continue;
     const sin = Math.sin(a.yaw);
     const cos = Math.cos(a.yaw);
     const bob = a.mood === "roam" || a.mood === "flee" ? Math.abs(Math.sin(a.phase)) * 0.03 : 0;
@@ -99,7 +110,7 @@ function writeKind(
     e[o + 10] = cos * s;
     e[o + 11] = 0;
     e[o + 12] = a.x;
-    e[o + 13] = bob;
+    e[o + 13] = a.y + bob;
     e[o + 14] = a.z;
     e[o + 15] = 1;
   }

@@ -1,7 +1,8 @@
-/** Arterial shrubs, elevated metro, outer walls. */
+/** Arterial shrubs + elevated metro. Outer walls live in gen-outer-walls.ts. */
 import { between } from "../lib/rng.ts";
 import type { GenBuffers } from "./gen-buffers.ts";
-import type { CityData, Rect } from "./types.ts";
+import type { CityData } from "./types.ts";
+export { pushOuterWalls } from "./gen-outer-walls.ts";
 
 export function placeMedianShrubs(g: GenBuffers): void {
   const { rng, cfg, roadsX, roadsZ, xs, zs } = g;
@@ -66,14 +67,4 @@ export function buildMetro(g: GenBuffers): {
     metroSegments: stations,
     metroLine: { x0: first.x, z0: first.z, x1: last.x, z1: last.z },
   };
-}
-
-export function pushOuterWalls(g: GenBuffers, bounds: Rect): void {
-  const pad = 14;
-  g.boxes.push(
-    { minX: bounds.minX - 80, maxX: bounds.minX - pad, minZ: bounds.minZ - 80, maxZ: bounds.maxZ + 80, h: 0 },
-    { minX: bounds.maxX + pad, maxX: bounds.maxX + 80, minZ: bounds.minZ - 80, maxZ: bounds.maxZ + 80, h: 0 },
-    { minX: bounds.minX - 80, maxX: bounds.maxX + 80, minZ: bounds.minZ - 80, maxZ: bounds.minZ - pad, h: 0 },
-    { minX: bounds.minX - 80, maxX: bounds.maxX + 80, minZ: bounds.maxZ + pad, maxZ: bounds.maxZ + 80, h: 0 },
-  );
 }

@@ -102,10 +102,9 @@ function surfaceFor(region: TerrainRegion, onRoad: boolean): SurfaceKind {
   return "asphalt";
 }
 
-function onCarriageway(city: CityData, x: number, z: number): boolean {
+function onGridRoad(city: CityData, x: number, z: number): boolean {
   for (const r of city.roadsX) if (Math.abs(x - r.c) <= r.half + 0.4) return true;
   for (const r of city.roadsZ) if (Math.abs(z - r.c) <= r.half + 0.4) return true;
-  if (onTrailRoad(city, x, z)) return true;
   return false;
 }
 
@@ -147,25 +146,52 @@ export function heightAt(city: CityData, x: number, z: number): number {
   return ridge * prof.hillRise * (0.55 + n * 0.7) + fringe;
 }
 
+function onFlyover(city: CityData, x: number, z: number): number | null {
+  const fo = city.flyover;
+  if (!fo) return null;
+  if (z < fo.z0 || z > fo.z1) return null;
+  if (Math.abs(x - fo.x) > fo.half) return null;
+  return fo.deckY + 0.3;
+}
+
+function apronPad(city: CityData, x: number, z: number): number {
+  const { bounds } = city;
+  let pad = 0;
+  if (x < bounds.minX) pad = Math.max(pad, bounds.minX - x);
+  if (x > bounds.maxX) pad = Math.max(pad, x - bounds.maxX);
+  if (z < bounds.minZ) pad = Math.max(pad, bounds.minZ - z);
+  if (z > bounds.maxZ) pad = Math.max(pad, z - bounds.maxZ);
+  return pad;
+}
+
 export function sampleTerrain(city: CityData, x: number, z: number): TerrainSample {
   const eps = 1.6;
   const trail = onTrailRoad(city, x, z);
-  const y = heightAt(city, x, z) + (trail ? 0.04 : 0);
-  const yx = heightAt(city, x + eps, z);
-  const yz = heightAt(city, x, z + eps);
-  const gradX = (yx - heightAt(city, x, z)) / eps;
-  const gradZ = (yz - heightAt(city, x, z)) / eps;
+  const flyY = onFlyover(city, x, z);
+  const base = heightAt(city, x, z);
+  const y = flyY ?? base + (trail ? (trail.trail.kind === "hill" ? 0.08 : 0.05) : 0);
+  // Flat urban core — skip two extra noise samples every drive/foot tick
+  let gradX = 0;
+  let gradZ = 0;
+  if (flyY == null && (apronPad(city, x, z) > 0.5 || trail)) {
+    const yx = heightAt(city, x + eps, z);
+    const yz = heightAt(city, x, z + eps);
+    gradX = (yx - base) / eps;
+    gradZ = (yz - base) / eps;
+  }
   let region = regionAt(city, x, z);
   if (trail?.trail.kind === "hill") region = "hills";
   else if (trail?.trail.kind === "village") region = "village";
-  const road = !!trail || onCarriageway(city, x, z);
+  const road = flyY != null || !!trail || onGridRoad(city, x, z);
   let surface = surfaceFor(region, road);
-  if (trail?.trail.kind === "village") surface = "dirt";
+  if (trail?.trail.kind === "village") surface = trail.trail.half < 1.7 ? "gravel" : "dirt";
   if (trail?.trail.kind === "hill") surface = "asphalt";
+  if (flyY != null) surface = "asphalt";
   let grip = GRIP[surface];
-  if (region === "hills" && Math.hypot(gradX, gradZ) > 0.12) grip *= 0.88;
-  if (trail?.trail.kind === "hill") grip *= 0.94; // mountain asphalt
-  if (region === "highway" && road && !trail) grip = Math.min(1.08, grip * 1.05);
+  if (region === "hills" && Math.hypot(gradX, gradZ) > 0.12) grip *= 0.85;
+  if (trail?.trail.kind === "hill") grip *= 0.92;
+  if (region === "highway" && road && !trail && flyY == null) grip = Math.min(1.08, grip * 1.05);
+  // Heavy vehicles feel grades more — caller can scale; keep base grade strong on hills
   return { y, gradX, gradZ, region, surface, grip };
 }
 

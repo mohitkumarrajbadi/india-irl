@@ -40,6 +40,10 @@ for (const id of CITY_IDS) {
   assert.ok(signals >= 2, `${id}: expected traffic signals, got ${signals}`);
   assert.ok(city.trails.length >= 2, `${id}: expected village/hill trails, got ${city.trails.length}`);
   assert.ok(city.trails.some((t) => t.kind === "hill"), `${id}: missing hill road`);
-  console.log(`${id}: ${city.buildings.length} buildings, ${city.trees.length} trees, fringe ${fringe}, signals ${signals}, strays ${city.strays.length}, trails ${city.trails.length}, ${ms.toFixed(1)} ms`);
+  assert.ok(city.trails.some((t) => t.kind === "village" && t.half <= 2.1), `${id}: village roads should be narrow`);
+  // Outer walls must leave trail gates (more than 4 solid wall boxes)
+  assert.ok(city.boxes.filter((b) => b.h === 0).length >= 4, `${id}: outer walls missing`);
+  if (id !== "gurugram") assert.ok(city.flyover, `${id}: expected arterial flyover`);
+  console.log(`${id}: ${city.buildings.length} buildings, ${city.trees.length} trees, fringe ${fringe}, signals ${signals}, strays ${city.strays.length}, trails ${city.trails.length}, flyover ${city.flyover ? "yes" : "no"}, ${ms.toFixed(1)} ms`);
 }
 console.log("world checks passed");

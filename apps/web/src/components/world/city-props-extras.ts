@@ -13,6 +13,7 @@ import {
   trafficSignal,
   waterTanker,
 } from "@/gfx/props";
+import { heightAt } from "@/world/terrain-sample";
 import type { PropBuildCtx } from "./city-props-ctx";
 import { registerDestMesh } from "./dest-register";
 
@@ -22,9 +23,10 @@ export function buildExtras(ctx: PropBuildCtx): void {
     city.extras.map((e, i) => (e.v === k ? i : -1)).filter((i) => i >= 0);
   const byKind = (k: number) => city.extras.filter((e) => e.v === k);
   const placeExtra = (list: typeof city.extras, faceRoad = false) => (i: number, o: THREE.Object3D) => {
-    o.position.set(list[i].x, 0, list[i].z);
-    o.rotation.y = faceRoad ? list[i].rot : list[i].rot + Math.PI;
-    o.scale.setScalar(list[i].s);
+    const e = list[i]!;
+    o.position.set(e.x, heightAt(city, e.x, e.z), e.z);
+    o.rotation.y = faceRoad ? e.rot : e.rot + Math.PI;
+    o.scale.setScalar(e.s);
   };
   const fruit = byKind(0);
   const flowers = byKind(1);

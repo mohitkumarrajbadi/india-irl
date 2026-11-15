@@ -2,6 +2,7 @@
 import { vertexMat } from "@/gfx/geo";
 import { makeInstanced } from "@/gfx/instancing";
 import { busStop, chaiStall } from "@/gfx/props";
+import { heightAt } from "@/world/terrain-sample";
 import { STALL_TINTS, type PropBuildCtx } from "./city-props-ctx";
 import { registerDestMesh } from "./dest-register";
 
@@ -16,7 +17,7 @@ export function buildStreetLife(ctx: PropBuildCtx): void {
       city.busStops.length,
       (i, o) => {
         const b = city.busStops[i];
-        o.position.set(b.x, 0, b.z);
+        o.position.set(b.x, heightAt(city, b.x, b.z), b.z);
         o.rotation.y = b.rot;
       },
       { cast: true, receive: true },
@@ -31,7 +32,7 @@ export function buildStreetLife(ctx: PropBuildCtx): void {
       city.stalls.length,
       (i, o) => {
         const s = city.stalls[i];
-        o.position.set(s.x, 0, s.z);
+        o.position.set(s.x, heightAt(city, s.x, s.z), s.z);
         o.rotation.y = s.rot + Math.PI;
       },
       { cast: true, color: (i) => STALL_TINTS[city.stalls[i].v % STALL_TINTS.length] },

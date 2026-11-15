@@ -22,12 +22,18 @@ const sample = sampleTerrain(city, mid.x, mid.z);
 assert.equal(sample.region, "hills");
 assert.equal(sample.surface, "asphalt");
 assert.ok(sample.y > 0.5, `hill road should be elevated, y=${sample.y}`);
+assert.ok(Math.hypot(sample.gradX, sample.gradZ) >= 0);
 
 const village = villages[0]!;
+assert.ok(village.half <= 2.1, "village single-carriageway");
 const vp = village.points[Math.floor(village.points.length * 0.6)]!;
 const vHit = nearestTrail(city, vp.x, vp.z, 8);
 assert.ok(vHit && vHit.trail.kind === "village");
-// Village trails should feel lived-in: stalls or cows nearby
 assert.ok(city.stalls.length > 0 || city.cows.length > 0);
+assert.ok(city.flyover, "flyover expected");
+const fo = city.flyover!;
+const under = sampleTerrain(city, fo.x, (fo.z0 + fo.z1) * 0.5);
+// On deck when centered
+assert.ok(under.y >= fo.deckY * 0.9, `flyover deck y=${under.y}`);
 
 console.log("trail-roads.test.ts ok");

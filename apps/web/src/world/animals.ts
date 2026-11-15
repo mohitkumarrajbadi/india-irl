@@ -2,6 +2,7 @@
 import { mulberry32, type Rng } from "../lib/rng.ts";
 import { ANIMAL_INFO, type Animal, type AnimalKind } from "./animal-kinds.ts";
 import { scareAnimalHorn, tickAnimal } from "./animal-tick.ts";
+import { heightAt } from "./terrain-sample.ts";
 import type { CityData } from "./types.ts";
 
 export type { Animal, AnimalKind } from "./animal-kinds.ts";
@@ -10,8 +11,10 @@ export { ANIMAL_INFO } from "./animal-kinds.ts";
 export class AnimalSim {
   readonly animals: Animal[] = [];
   private readonly rng: Rng;
+  private readonly city: CityData;
 
   constructor(city: CityData) {
+    this.city = city;
     this.rng = mulberry32(city.config.seed ^ 0xa71_ca7);
     for (const c of city.cows) {
       // Village verge cows roam tighter; urban cows similar
@@ -39,6 +42,7 @@ export class AnimalSim {
       scale,
       x,
       z,
+      y: heightAt(this.city, x, z),
       yaw,
       speed: 0,
       phase: this.rng() * 10,
@@ -68,12 +72,13 @@ export class AnimalSim {
   }
 
   update(dt: number, px: number, pz: number, vehSpeed: number, now = performance.now()): void {
-    const bubble2 = 200 * 200;
+    const bubble2 = 160 * 160;
     for (const a of this.animals) {
       const dx = a.x - px;
       const dz = a.z - pz;
       if (dx * dx + dz * dz > bubble2) continue; // sleep far animals
       tickAnimal(a, dt, px, pz, now, this.rng, vehSpeed);
+      a.y = heightAt(this.city, a.x, a.z);
     }
   }
 }

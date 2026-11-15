@@ -10,16 +10,16 @@ export function TrailRoads({ city }: { city: CityData }) {
   const stuff = useMemo(() => {
     const geos = buildTrailRoadGeos(city);
     const village = new THREE.MeshStandardMaterial({
-      color: "#8a6840",
-      roughness: 1,
+      color: "#7a6a48",
+      roughness: 0.98,
       metalness: 0,
       vertexColors: true,
       flatShading: true,
     });
     const hill = new THREE.MeshStandardMaterial({
-      color: "#3e4046",
-      roughness: 0.88,
-      metalness: 0.05,
+      color: "#3a3c42",
+      roughness: 0.82,
+      metalness: 0.06,
       vertexColors: true,
     });
     return { geos, mats: { village, hill } };

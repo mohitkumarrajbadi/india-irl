@@ -45,6 +45,9 @@ export function stepDriveMode(
   if (!usedRapier) {
     const phys = PLAYER_PHYSICS[s.kind as 1 | 2 | 3];
     const terrain = sampleTerrain(city, s.ds.x, s.ds.z);
+    // Heavier chassis struggle more on steep grades
+    const massScale = s.kind === 3 ? 1.35 : s.kind === 1 ? 0.85 : 1;
+    const grade = driveGrade(terrain, s.ds.yaw) * massScale;
     stepDrive(
       s.ds,
       {
@@ -54,12 +57,12 @@ export function stepDriveMode(
         handbrake: jump,
         health: s.chassisHp / Math.max(1, phys.durability),
         gripMul: terrain.grip * wetGripMul(),
-        grade: driveGrade(terrain, s.ds.yaw),
+        grade,
       },
       spec,
       dt,
     );
-    // Match chassis to apron height outside the flat city fabric
+    // Match chassis to apron / flyover / trail height
     if (terrain.y > 0.05) s.y = terrain.y;
     else if (s.mode === "drive") s.y = 0;
   }

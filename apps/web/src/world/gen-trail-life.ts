@@ -97,7 +97,7 @@ function decorateVillage(g: GenBuffers, trail: TrailRoad, rng: Rng): void {
 
 function decorateHill(g: GenBuffers, trail: TrailRoad, rng: Rng): void {
   const pts = trail.points;
-  // One shrine / viewpoint near the start, then quiet climb
+  // Viewpoint shrine near start
   if (pts.length > 4) {
     const a = pts[2]!;
     const b = pts[3]!;
@@ -105,12 +105,21 @@ function decorateHill(g: GenBuffers, trail: TrailRoad, rng: Rng): void {
     g.extras.push({ x: p.x, z: p.z, rot: p.rot, s: 1.05, v: 2 });
     g.circles.push({ x: p.x, z: p.z, r: 0.7 });
   }
-  // Sparse trees only — no cattle packs, no dog packs on the ghats
-  for (let i = 5; i < pts.length - 2; i += 4) {
-    if (!chance(rng, 0.35)) continue;
+  // Occasional chai tapri at a hairpin / viewpoint
+  if (pts.length > 12 && chance(rng, 0.7)) {
+    const i = Math.floor(pts.length * 0.55);
     const a = pts[i]!;
     const b = pts[i + 1]!;
-    const p = sideOf(a.x, a.z, b.x, b.z, chance(rng, 0.5) ? 1 : -1, trail.half + between(rng, 6, 14));
-    g.addTree(p.x, p.z, between(rng, 0.7, 1.1));
+    const p = sideOf(a.x, a.z, b.x, b.z, -1, trail.half + 3.5);
+    g.stalls.push({ x: p.x, z: p.z, rot: p.rot + Math.PI, s: 0.9, v: 1 });
+    g.circles.push({ x: p.x, z: p.z, r: 1.0 });
+  }
+  // Sparse forest — no cattle packs on the ghats
+  for (let i = 5; i < pts.length - 2; i += 3) {
+    if (!chance(rng, 0.4)) continue;
+    const a = pts[i]!;
+    const b = pts[i + 1]!;
+    const p = sideOf(a.x, a.z, b.x, b.z, chance(rng, 0.5) ? 1 : -1, trail.half + between(rng, 6, 16));
+    g.addTree(p.x, p.z, between(rng, 0.65, 1.15));
   }
 }
