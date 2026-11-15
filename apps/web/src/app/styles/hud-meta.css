@@ -1,0 +1,129 @@
+.city-map-thumb {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  gap: 6px 12px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(243, 239, 228, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  min-height: 0;
+  flex: 0 0 auto;
+}
+
+.city-map-thumb-head {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  color: rgba(243, 239, 228, 0.55);
+}
+
+.city-map-thumb-head strong {
+  color: var(--city-accent, var(--marigold));
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+
+.city-map-thumb canvas {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  width: auto;
+  max-width: 120px;
+  max-height: 84px;
+  border-radius: 10px;
+  border: 1px solid rgba(243, 239, 228, 0.1);
+}
+
+.city-map-thumb-note {
+  grid-column: 2;
+  grid-row: 2;
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: rgba(243, 239, 228, 0.45);
+}
+
+.clock {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.clock strong {
+  font-size: 20px;
+}
+
+.clock span {
+  color: var(--marigold);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}
+
+.row {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(243, 239, 228, 0.82);
+  font-size: 12px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #888;
+}
+
+.dot.ok,
+.fps.ok {
+  background: #6fe39a;
+  color: #b6e3a8;
+}
+
+.dot.warn,
+.fps.warn {
+  background: var(--marigold);
+  color: var(--marigold);
+}
+
+.dot.bad,
+.fps.bad {
+  background: #f0a08a;
+  color: #f0a08a;
+}
+
+.fps {
+  background: none !important;
+  font-size: 11px;
+}
+
+.district {
+  position: absolute;
+  left: 50%;
+  top: 70px;
+  transform: translateX(-50%);
+  text-align: center;
+  animation: banner 4.2s ease forwards;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7);
+}
+
+.district span {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--marigold);
+}
+
+.district strong {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+

@@ -58,8 +58,15 @@ export function shouldEjectBike(severity: number, vehicleKind: number): boolean 
   return vehicleKind === 2 && severity >= 0.55;
 }
 
+/** @deprecated Prefer shouldSeparateRider / shouldEjectCabinBody with mass context. */
 export function shouldEjectCabin(severity: number, vehicleKind: number): boolean {
   return vehicleKind !== 2 && severity >= 0.91;
+}
+
+/** Structural damage points from a hit (scales with severity²). */
+export function chassisDamage(severity: number, durability: number): number {
+  if (severity < 0.18) return 0;
+  return Math.min(durability * 0.35, severity * severity * (18 + durability * 0.12));
 }
 
 export function wallCrashSeverity(pushed: number, speed: number): number {

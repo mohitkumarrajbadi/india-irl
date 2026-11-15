@@ -1,6 +1,7 @@
-/** Per-frame sidewalk AI: walk / flee / fight / thrown / runover / down. */
+/** Per-frame sidewalk AI: walk / intent / flee / fight / thrown / runover / down. */
 import { clamp } from "../lib/math.ts";
 import { between, type Rng } from "../lib/rng.ts";
+import type { PedIntent } from "./ped-intent.ts";
 import type { Ped } from "./pedestrians.ts";
 
 export type PedRetarget = (p: Ped) => void;
@@ -15,6 +16,7 @@ export function tickPed(
   now: number,
   rng: Rng,
   retarget: PedRetarget,
+  night = 0,
 ): void {
   if (p.mood === "thrown") {
     p.vy -= GRAV * dt;
@@ -74,7 +76,7 @@ export function tickPed(
 
   if (p.mood !== "walk" && now > p.moodUntil) {
     p.mood = "walk";
-    p.speed = between(rng, 0.9, 1.55);
+    p.speed = between(rng, 0.9, 1.55) * (1 - night * 0.25);
     retarget(p);
   }
 
@@ -102,10 +104,13 @@ export function tickPed(
     return;
   }
 
+  if (tickIntent(p, dt, now, rng, retarget)) return;
+
   const ex = p.bx - p.ax;
   const ez = p.bz - p.az;
   const len = Math.hypot(ex, ez) || 1;
-  p.t += (p.dir * p.speed * dt) / len;
+  const walkSpd = p.speed * (1 - night * 0.28);
+  p.t += (p.dir * walkSpd * dt) / len;
   if (p.t > 1 || p.t < 0) retarget(p);
   p.x = p.ax + ex * clamp(p.t, 0, 1);
   p.z = p.az + ez * clamp(p.t, 0, 1);
@@ -114,7 +119,7 @@ export function tickPed(
   while (dy > Math.PI) dy -= Math.PI * 2;
   while (dy < -Math.PI) dy += Math.PI * 2;
   p.yaw += clamp(dy, -3 * dt, 3 * dt);
-  p.phase += p.speed * dt * 6;
+  p.phase += walkSpd * dt * 6;
 
   const ddx = p.x - px;
   const ddz = p.z - pz;
@@ -125,4 +130,71 @@ export function tickPed(
     p.x += (ddx / d) * push;
     p.z += (ddz / d) * push;
   }
+}
+
+function tickIntent(
+  p: Ped,
+  dt: number,
+  now: number,
+  rng: Rng,
+  retarget: PedRetarget,
+): boolean {
+  const intent: PedIntent = p.intent;
+  if (intent === "patrol") return false;
+
+  if (now > p.intentUntil && intent !== "cross") {
+    p.intent = "patrol";
+    p.chatWith = -1;
+    if (intent === "loiter" || intent === "chat") retarget(p);
+    return false;
+  }
+
+  if (intent === "loiter") {
+    const dx = p.tx - p.x;
+    const dz = p.tz - p.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist > 0.6) {
+      const spd = Math.min(p.speed, 1.2);
+      p.x += (dx / dist) * spd * dt;
+      p.z += (dz / dist) * spd * dt;
+      p.yaw = Math.atan2(dx, dz);
+      p.phase += spd * dt * 5;
+    } else {
+      p.phase += dt * 0.8;
+      p.yaw += Math.sin(now * 0.001 + p.phase) * 0.4 * dt;
+    }
+    return true;
+  }
+
+  if (intent === "cross") {
+    const dx = p.tx - p.x;
+    const dz = p.tz - p.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist < 0.7 || now > p.intentUntil) {
+      p.intent = "patrol";
+      retarget(p);
+      return false;
+    }
+    const spd = p.speed * 1.15;
+    p.x += (dx / dist) * spd * dt;
+    p.z += (dz / dist) * spd * dt;
+    p.yaw = Math.atan2(dx, dz);
+    p.phase += spd * dt * 7;
+    return true;
+  }
+
+  if (intent === "chat") {
+    const dx = p.tx - p.x;
+    const dz = p.tz - p.z;
+    const dist = Math.hypot(dx, dz) || 1;
+    if (dist > 1.4) {
+      p.x += (dx / dist) * 0.9 * dt;
+      p.z += (dz / dist) * 0.9 * dt;
+    }
+    p.yaw = Math.atan2(dx, dz);
+    p.phase += dt * 1.2;
+    return true;
+  }
+
+  return false;
 }

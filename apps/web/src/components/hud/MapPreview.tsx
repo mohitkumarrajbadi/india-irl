@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import { getCityMapAtlas, paintMapMarkers } from "@/gfx/city-map";
-import { useJob } from "@/game/jobs";
 import { live } from "@/game/runtime";
 import { useGame } from "@/game/store";
 import { useNet } from "@/net/store";
@@ -64,7 +63,6 @@ export function MapPreview({ city }: { city: CityData }) {
         if (p.snaps.length === 0) return;
         peers.push({ x: p.rx, z: p.rz, veh: !!p.veh });
       });
-      const job = useJob.getState();
       const sx = cssW / atlas.width;
       const sy = cssH / atlas.height;
 
@@ -75,7 +73,7 @@ export function MapPreview({ city }: { city: CityData }) {
         {
           player: { x: live.x, z: live.z, yaw: live.yaw },
           peers,
-          job: job.kind ? job : null,
+          job: null,
           meetId,
           labels: true,
         },

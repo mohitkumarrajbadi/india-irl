@@ -17,19 +17,20 @@ export const FOOT = {
 } as const;
 
 export const COMBAT = {
-  punchRange: 1.85,
-  kickRange: 2.15,
-  punchCone: 0.72, // cos angle ~43°
-  kickCone: 0.55,
-  punchForce: 7.2,
-  kickForce: 9.5,
-  punchDamage: 12,
-  kickDamage: 18,
-  cooldown: 0.52,
-  stun: 0.28,
+  punchRange: 1.95,
+  kickRange: 2.35,
+  punchCone: 0.68, // cos angle ~47°
+  kickCone: 0.5,
+  punchForce: 8.4,
+  kickForce: 11.2,
+  punchDamage: 14,
+  kickDamage: 20,
+  cooldown: 0.48,
+  stun: 0.32,
   hitEmotePunch: 5,
   hitEmoteKick: 6,
-  emoteHold: 0.42,
+  /** Long enough for wind-up → strike → recover to finish. */
+  emoteHold: 0.55,
 } as const;
 
 /** Soft accel toward target speed (grounded). */

@@ -1,0 +1,103 @@
+/* ---------- Touch / mobile ---------- */
+
+.touch-ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.touch-stick {
+  position: absolute;
+  left: 96px;
+  bottom: 110px;
+  width: 112px;
+  height: 112px;
+  margin: -56px 0 0 -56px;
+  border-radius: 50%;
+  border: 2px solid rgba(243, 239, 228, 0.28);
+  background: rgba(12, 16, 12, 0.28);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.touch-stick-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(243, 239, 228, 0.55);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+.touch-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 28%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(12, 16, 12, 0.55);
+  color: rgba(243, 239, 228, 0.9);
+  font-size: 13px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.touch-actions {
+  position: absolute;
+  right: 12px;
+  bottom: 120px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(64px, 76px));
+  gap: 8px;
+  pointer-events: auto;
+}
+
+@media (max-width: 720px) {
+  .dock {
+    bottom: 12px;
+    width: min(92vw, 420px);
+  }
+
+  .audio-strip {
+    flex-wrap: wrap;
+    justify-content: center;
+    border-radius: 16px;
+  }
+
+  .brand {
+    max-width: 46vw;
+  }
+}
+
+.touch-actions button {
+  appearance: none;
+  border: 1px solid rgba(243, 239, 228, 0.22);
+  background: rgba(12, 16, 12, 0.55);
+  color: #f3efe4;
+  border-radius: 14px;
+  padding: 12px 8px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  touch-action: none;
+  user-select: none;
+}
+
+.touch-actions button.on,
+.touch-actions button:active {
+  background: rgba(231, 197, 106, 0.35);
+  border-color: rgba(231, 197, 106, 0.7);
+}
+
+@media (pointer: fine) and (hover: hover) {
+  .touch-ui {
+    display: none;
+  }
+}
+

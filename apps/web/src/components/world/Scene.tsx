@@ -6,6 +6,7 @@ import { RemotePlayers } from "@/components/player/RemotePlayers";
 import { VoiceController } from "@/components/player/VoiceController";
 import type { Look } from "@/avatar/appearance";
 import type { CityData } from "@/world/types";
+import { Animals } from "./Animals";
 import { Atmosphere } from "./Atmosphere";
 import { CityBuildings } from "./CityBuildings";
 import { CityGround } from "./CityGround";
@@ -15,9 +16,12 @@ import { MeetMarkers } from "./MeetMarkers";
 import { Metro } from "./Metro";
 import { Pedestrians } from "./Pedestrians";
 import { Police } from "./Police";
+import { Rain } from "./Rain";
 import { ShadowSimGhost } from "./ShadowSimGhost";
 import { SignalLights } from "./SignalLights";
 import { StreamedContent } from "./StreamedContent";
+import { TerrainMesh } from "./TerrainMesh";
+import { TrailRoads } from "./TrailRoads";
 import { Traffic } from "./Traffic";
 
 type SceneProps = { city: CityData; name: string; look: Look };
@@ -27,6 +31,9 @@ export const Scene = memo(function Scene({ city, name, look }: SceneProps) {
   return (
     <>
       <Atmosphere config={city.config} />
+      <Rain />
+      <TerrainMesh city={city} />
+      <TrailRoads city={city} />
       <CityGround city={city} />
       <CityBuildings city={city} />
       <CityProps city={city} />
@@ -36,6 +43,7 @@ export const Scene = memo(function Scene({ city, name, look }: SceneProps) {
       <Lake city={city} />
       <Traffic city={city} />
       <Pedestrians city={city} />
+      <Animals city={city} />
       <Police city={city} />
       <StreamedContent />
       <RemotePlayers config={city.config} />

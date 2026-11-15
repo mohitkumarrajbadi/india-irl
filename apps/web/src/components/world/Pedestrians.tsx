@@ -7,11 +7,12 @@ import { GeoBuilder, vertexMat } from "@/gfx/geo";
 import { makeInstanced } from "@/gfx/instancing";
 import { quality } from "@/game/quality";
 import { live, runtime } from "@/game/runtime";
+import { env } from "@/gfx/env";
 import { BOTTOM_COLORS, SKIN_TONES, TOP_COLORS } from "@/avatar/appearance";
 import { PedestrianSim } from "@/world/pedestrians";
 import type { CityData } from "@/world/types";
 
-const PED_COUNTS = { low: 28, medium: 48, high: 72 } as const;
+const PED_COUNTS = { low: 36, medium: 56, high: 84 } as const;
 
 /**
  * Soft chibi sidewalk figure — closer to player avatar proportions than a
@@ -67,7 +68,11 @@ export function Pedestrians({ city }: { city: CityData }) {
 
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.05);
-    set.sim.update(dt, live.x, live.z, performance.now());
+    set.sim.update(dt, live.x, live.z, performance.now(), env.night, {
+      yaw: live.yaw,
+      speed: live.speed,
+      vehicle: live.vehicle,
+    });
     const e = set.mesh.instanceMatrix.array as Float32Array;
     const peds = set.sim.peds;
     for (let i = 0; i < peds.length; i += 1) {

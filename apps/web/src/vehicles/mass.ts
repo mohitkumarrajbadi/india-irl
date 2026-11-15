@@ -1,20 +1,21 @@
-/** Vehicle mass classes for smash outcomes (kg, approximate). */
+/** Vehicle mass classes for smash outcomes — sourced from physics-props. */
 import type { TrafficKind } from "./traffic";
+import { PLAYER_PHYSICS, TRAFFIC_PHYSICS } from "./physics-props.ts";
 
 /** Player drive kinds: 1 auto, 2 bike, 3 cab. */
 export const PLAYER_MASS: Record<1 | 2 | 3, number> = {
-  1: 420,
-  2: 140,
-  3: 1200,
+  1: PLAYER_PHYSICS[1].mass,
+  2: PLAYER_PHYSICS[2].mass,
+  3: PLAYER_PHYSICS[3].mass,
 };
 
 /** NPC traffic: 0 auto, 1 bike, 2 car, 3 bus, 4 truck. */
 export const TRAFFIC_MASS: Record<TrafficKind, number> = {
-  0: 420,
-  1: 140,
-  2: 1200,
-  3: 9000,
-  4: 7000,
+  0: TRAFFIC_PHYSICS[0].mass,
+  1: TRAFFIC_PHYSICS[1].mass,
+  2: TRAFFIC_PHYSICS[2].mass,
+  3: TRAFFIC_PHYSICS[3].mass,
+  4: TRAFFIC_PHYSICS[4].mass,
 };
 
 export const WORLD_MASS = 50_000;
@@ -25,7 +26,6 @@ export const WORLD_MASS = 50_000;
  */
 export function selfSeverityScale(selfMass: number, otherMass: number): number {
   const t = otherMass / (selfMass + otherMass);
-  // Keep for callers; gentler than old ×2.05 curve
   return Math.min(1.15, Math.max(0.18, t * 1.7));
 }
 

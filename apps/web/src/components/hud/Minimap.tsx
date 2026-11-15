@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import { getCityMapAtlas, paintMapMarkers } from "@/gfx/city-map";
-import { useJob } from "@/game/jobs";
 import { live } from "@/game/runtime";
 import { useGame } from "@/game/store";
 import { useNet } from "@/net/store";
@@ -43,7 +42,6 @@ export function Minimap({ city }: { city: CityData }) {
         if (p.snaps.length === 0) return;
         peers.push({ x: p.rx, z: p.rz, veh: !!p.veh });
       });
-      const job = useJob.getState();
       const screenScale = el.width / (half * 2);
 
       paintMapMarkers(
@@ -53,7 +51,7 @@ export function Minimap({ city }: { city: CityData }) {
         {
           player: { x: live.x, z: live.z, yaw: live.yaw },
           peers,
-          job: job.kind ? job : null,
+          job: null,
         },
         (wx, wz) => ({
           x: el.width / 2 + (atlas.mx(wx) - cx) * screenScale,

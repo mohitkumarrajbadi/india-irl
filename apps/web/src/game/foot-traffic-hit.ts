@@ -24,7 +24,7 @@ export function resolveFootTrafficHit(
 ): FootTrafficHit | null {
   let best: FootTrafficHit | null = null;
   for (const a of agents) {
-    if (a.ghost > 0.05 || Math.abs(a.speed) < 3) continue;
+    if (a.taken || a.ghost > 0.05 || Math.abs(a.speed) < 3) continue;
     const info = KIND_INFO[a.kind];
     const box: Obb = {
       x: a.x,

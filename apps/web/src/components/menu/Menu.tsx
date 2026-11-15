@@ -1,216 +1,19 @@
 "use client";
 
-import { Canvas, useFrame } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import * as THREE from "three";
-import {
-  ACCESSORIES,
-  BODY_NAMES,
-  BOTTOM_COLORS,
-  BOTTOM_NAMES,
-  DEFAULT_LOOK,
-  HAIR_COLORS,
-  HAIR_NAMES,
-  SHOE_COLORS,
-  SHOE_NAMES,
-  SKIN_TONES,
-  TOP_COLORS,
-  TOP_NAMES,
-  cleanName,
-  lookKey,
-  randomLook,
-  type Look,
-} from "@/avatar/appearance";
-import { EMOTES, buildRig, poseRig } from "@/avatar/rig";
-import { advanceStep, applyEndowment, loadOnboard } from "@/game/onboarding";
-import { grantMission, loadProfile, saveProfile, useGame } from "@/game/store";
-import {
-  levelInfo,
-  loadVibe,
-  missionsDone,
-  noteLookTweak,
-  noteSession,
-  touchStreak,
-  type VibeState,
-} from "@/game/vibe";
-import {
-  createPlan,
-  fetchPlan,
-  fetchStats,
-  honestHeadcount,
-  joinPlan,
-  type PlanInfo,
-  type StatsMap,
-} from "@/net/stats";
-import { CITIES, CITY_IDS } from "@/world/cities";
+/** Character creator / lobby — thin shell wiring panes + actions. */
+import { useState, type CSSProperties } from "react";
+import { cleanName, lookKey, type Look } from "@/avatar/appearance";
+import { EMOTES } from "@/avatar/rig";
+import { levelInfo, noteLookTweak } from "@/game/vibe";
+import { useGame } from "@/game/store";
+import { CITIES } from "@/world/cities";
 import { CITY_UI } from "@/world/cityUi";
-import { CityMapThumb } from "./CityMapThumb";
-import {
-  buildShareUrl,
-  identityCaption,
-  parseDeepLink,
-  whatsappShareText,
-} from "@/world/meets";
-import type { CityId } from "@/world/types";
-
-function Preview({ look, emote }: { look: Look; emote: number }) {
-  const key = lookKey(look);
-  // Rebuild whenever the look identity changes (and after HMR of the rig module).
-  const rig = useMemo(() => buildRig(look), [key, look]);
-  const group = useRef<THREE.Group>(null);
-  const drag = useRef({ down: false, x: 0, vel: 0 });
-  const started = useRef(performance.now());
-
-  useEffect(() => {
-    started.current = performance.now();
-    // Face the camera with a light 3/4 turn; drag to spin.
-    if (group.current) group.current.rotation.y = 0.32;
-    drag.current.vel = 0;
-  }, [emote, key]);
-
-  useFrame((state, delta) => {
-    const g = group.current;
-    if (!g) return;
-    if (drag.current.down) {
-      /* user spinning */
-    } else if (Math.abs(drag.current.vel) > 0.002) {
-      g.rotation.y += drag.current.vel * delta;
-      drag.current.vel *= Math.exp(-delta * 2.4);
-    } else {
-      // Ease back to a flattering 3/4 (never idle-spin away from the face)
-      const target = 0.32;
-      let d = target - g.rotation.y;
-      while (d > Math.PI) d -= Math.PI * 2;
-      while (d < -Math.PI) d += Math.PI * 2;
-      g.rotation.y += d * Math.min(1, delta * 1.8);
-      drag.current.vel = 0;
-    }
-    poseRig(
-      rig,
-      { phase: 0, speed: 0, emote, emoteT: (performance.now() - started.current) / 1000, seat: 0, time: state.clock.elapsedTime },
-      delta,
-    );
-  });
-
-  return (
-    <group
-      ref={group}
-      onPointerDown={(e) => {
-        drag.current.down = true;
-        drag.current.x = e.clientX;
-        (e.target as Element | null)?.setPointerCapture?.(e.pointerId);
-      }}
-      onPointerMove={(e) => {
-        if (!drag.current.down || !group.current) return;
-        const dx = e.clientX - drag.current.x;
-        drag.current.x = e.clientX;
-        group.current.rotation.y += dx * 0.012;
-        drag.current.vel = dx * 0.4;
-      }}
-      onPointerUp={() => {
-        drag.current.down = false;
-      }}
-    >
-      <primitive key={key} object={rig.root} />
-      <mesh position={[0, 0.5, 0]} visible={false}>
-        <boxGeometry args={[1.4, 2.2, 1.4]} />
-      </mesh>
-    </group>
-  );
-}
-
-function StageGlow({ pulse }: { pulse: number }) {
-  const mesh = useRef<THREE.Mesh>(null);
-  useFrame((_, dt) => {
-    if (!mesh.current) return;
-    const m = mesh.current.material as THREE.MeshBasicMaterial;
-    m.opacity = 0.22 + Math.sin(performance.now() * 0.003 + pulse) * 0.06;
-    mesh.current.rotation.z += dt * 0.15;
-  });
-  return (
-    <mesh ref={mesh} rotation-x={-Math.PI / 2} position={[0, 0.01, 0]}>
-      <ringGeometry args={[1.05, 1.32, 64]} />
-      <meshBasicMaterial color="#e7c56a" transparent opacity={0.28} />
-    </mesh>
-  );
-}
-
-function PreviewCanvas({
-  look,
-  emote,
-  pulse,
-  cityId,
-}: {
-  look: Look;
-  emote: number;
-  pulse: number;
-  cityId: CityId;
-}) {
-  const ui = CITY_UI[cityId];
-  const floor = useMemo(() => {
-    const c = new THREE.Color(ui.accent);
-    c.multiplyScalar(0.18);
-    return `#${c.getHexString()}`;
-  }, [ui.accent]);
-  return (
-    <Canvas
-      dpr={[1, 2]}
-      shadows
-      camera={{ fov: 28, position: [0, 1.15, 3.35], near: 0.1, far: 30 }}
-      gl={{ antialias: true, alpha: false }}
-      onCreated={({ camera, gl }) => {
-        camera.lookAt(0, 1.05, 0);
-        gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.2;
-      }}
-    >
-      {/* Studio plate — soft blue like the Memoji refs */}
-      <color attach="background" args={["#1a4f9c"]} />
-      <hemisphereLight args={["#fff8f0", "#3a6fb5", 0.75]} />
-      <directionalLight
-        position={[2.2, 4.8, 3.2]}
-        intensity={2.1}
-        castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
-      />
-      <directionalLight position={[-2.8, 2.4, -1.5]} intensity={0.7} color="#a8c8ff" />
-      <directionalLight position={[0.2, 1.8, 3.5]} intensity={0.65} color="#ffe4c8" />
-      {/* Rim — separates silhouette from blue plate */}
-      <directionalLight position={[-1.5, 3.2, -3.5]} intensity={1.25} color="#d0e4ff" />
-      <mesh rotation-x={-Math.PI / 2} receiveShadow position={[0, -0.005, 0]}>
-        <circleGeometry args={[1.45, 64]} />
-        <meshStandardMaterial color={floor} roughness={0.72} metalness={0.08} />
-      </mesh>
-      <StageGlow pulse={pulse} />
-      <Preview look={look} emote={emote} />
-    </Canvas>
-  );
-}
-
-function Swatches({ colors, value, onPick }: { colors: readonly string[]; value: number; onPick: (i: number) => void }) {
-  return (
-    <div className="swatches">
-      {colors.map((c, i) => (
-        <button key={c} className={i === value ? "sw on" : "sw"} style={{ background: c }} onClick={() => onPick(i)} aria-label={`Color ${i + 1}`} />
-      ))}
-    </div>
-  );
-}
-
-function Chips({ names, value, onPick }: { names: readonly string[]; value: number; onPick: (i: number) => void }) {
-  return (
-    <div className="chips">
-      {names.map((n, i) => (
-        <button key={n} className={i === value ? "chip on" : "chip"} onClick={() => onPick(i)}>
-          {n}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-const TABS = ["Body", "Hair", "Outfit", "Extras"] as const;
+import { identityCaption } from "@/world/meets";
+import { LookControls, type MenuTab } from "./LookControls";
+import { copyInviteLink, enterGame, openWhatsAppShare, startMeetPlan } from "./menu-actions";
+import { MenuSetup } from "./MenuSetup";
+import { PreviewCanvas } from "./PreviewCanvas";
+import { useMenuBootstrap } from "./useMenuBootstrap";
 
 export default function Menu() {
   const look = useGame((s) => s.look);
@@ -218,173 +21,28 @@ export default function Menu() {
   const cityId = useGame((s) => s.cityId);
   const meetId = useGame((s) => s.meetId);
   const setLook = useGame((s) => s.setLook);
-  const [tab, setTab] = useState<(typeof TABS)[number]>("Body");
+  const [tab, setTab] = useState<MenuTab>("Body");
   const [emote, setEmote] = useState(0);
-  const [stats, setStats] = useState<StatsMap>({});
-  const [vibe, setVibe] = useState<VibeState>(loadVibe);
   const [pulse, setPulse] = useState(0);
   const [copied, setCopied] = useState(false);
-  const [flash, setFlash] = useState("");
-  const [plan, setPlan] = useState<PlanInfo | null>(null);
-  const [localTitle, setLocalTitleUi] = useState("");
-  const caption = identityCaption(lookKey(look));
+  const { stats, vibe, setVibe, plan, setPlan, flash, setFlash, localTitle } = useMenuBootstrap();
 
-  useEffect(() => {
-    const saved = loadProfile();
-    if (saved) useGame.setState({ name: saved.name, look: saved.look, cityId: saved.city });
-    try {
-      const deep = parseDeepLink(window.location.search);
-      const patch: {
-        cityId?: CityId;
-        meetId?: string | null;
-        joinId?: string | null;
-        planId?: string | null;
-      } = {};
-      if (deep.city) patch.cityId = deep.city;
-      if (deep.meet) patch.meetId = deep.meet;
-      if (deep.join) patch.joinId = deep.join;
-      if (deep.plan) patch.planId = deep.plan;
-      if (Object.keys(patch).length) useGame.setState(patch);
-      if (deep.plan) {
-        void fetchPlan(deep.plan).then((p) => {
-          if (!p) return;
-          setPlan(p);
-          if (!p.expired && deep.city) useGame.setState({ cityId: p.city, meetId: p.meet });
-        });
-      }
-    } catch {
-      /* ignore */
-    }
-    const award = touchStreak();
-    const endowed = applyEndowment(award.state);
-    setVibe(endowed?.vibe ?? award.state);
-    useGame.setState({ vibe: endowed?.vibe ?? award.state });
-    setLocalTitleUi(loadOnboard().localTitle);
-    if (award.streakUp && award.state.streak > 1) {
-      setFlash(`${award.state.streak}-day streak · keep it alive`);
-    } else if (endowed && endowed.gained > 0) {
-      setFlash(`Level bar primed · +${endowed.gained} vibe`);
-    } else if (award.gained > 0) {
-      setFlash(`Welcome back · +${award.gained} vibe`);
-    }
-  }, []);
-
-  useEffect(() => {
-    let alive = true;
-    const ctl = new AbortController();
-    const tick = () =>
-      fetchStats(ctl.signal).then((j) => {
-        if (alive) setStats(j);
-      });
-    tick();
-    const id = setInterval(tick, 5000);
-    return () => {
-      alive = false;
-      ctl.abort();
-      clearInterval(id);
-    };
-  }, []);
-
-  // Poll plan membership when linked.
-  useEffect(() => {
-    const planId = useGame.getState().planId;
-    if (!planId) return;
-    const id = setInterval(() => {
-      void fetchPlan(planId).then((p) => p && setPlan(p));
-    }, 8000);
-    return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    if (!flash) return;
-    const t = setTimeout(() => setFlash(""), 3800);
-    return () => clearTimeout(t);
-  }, [flash]);
-
-  const ready = cleanName(name).length > 0;
   const city = CITIES[cityId];
+  const cityUi = CITY_UI[cityId];
   const info = levelInfo(vibe.xp);
   const cityStat = stats[cityId];
   const meetStat = meetId && cityStat?.meets?.[meetId] ? cityStat.meets[meetId] : null;
   const here = meetStat ? meetStat.n : cityStat?.online ?? 0;
   const talking = meetStat ? meetStat.talking : cityStat?.talking ?? 0;
   const place = meetId ? city.meets.find((m) => m.id === meetId)?.label ?? city.name : city.name;
-  const totalOnline = CITY_IDS.reduce((n, id) => n + (stats[id]?.online ?? 0), 0);
-  const done = missionsDone(vibe);
-  const joins = cityStat?.recentJoins ?? [];
+  const ready = cleanName(name).length > 0;
+  const caption = identityCaption(lookKey(look));
 
   const tweak = (patch: Partial<Look>) => {
     setLook(patch);
     setPulse((p) => p + 1);
     setVibe(noteLookTweak());
   };
-
-  const go = () => {
-    const clean = cleanName(name);
-    if (!clean) return;
-    saveProfile(clean, look, cityId);
-    noteSession(vibe);
-    grantMission("enter");
-    const board = loadOnboard();
-    if (board.step === "customize") advanceStep("enter");
-    const planId = useGame.getState().planId;
-    if (planId) void joinPlan(planId, clean);
-    useGame.setState({ name: clean, phase: "playing", vibe: loadVibe() });
-  };
-
-  const shareUrl = () =>
-    buildShareUrl({
-      origin: window.location.origin + "/",
-      city: cityId,
-      meet: meetId,
-    });
-
-  const copyInvite = async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl());
-      setCopied(true);
-      setFlash("Invite copied · drop it in the group chat");
-      setTimeout(() => setCopied(false), 2200);
-    } catch {
-      setFlash("Copy failed — share the URL from the address bar");
-    }
-  };
-
-  const shareWhatsApp = () => {
-    const text = whatsappShareText({
-      cityName: city.name,
-      meetLabel: meetId ? place : null,
-      here,
-      talking,
-      url: shareUrl(),
-    });
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
-  };
-
-  const startPlan = async () => {
-    if (!meetId) {
-      setFlash("Pick a meet plaza first");
-      return;
-    }
-    const host = cleanName(name) || "Host";
-    const p = await createPlan(cityId, meetId, host);
-    if (!p) {
-      setFlash("Couldn’t start a plan — is the relay up?");
-      return;
-    }
-    setPlan(p);
-    useGame.setState({ planId: p.id });
-    const url = buildShareUrl({ origin: window.location.origin + "/", city: cityId, meet: meetId, plan: p.id });
-    try {
-      await navigator.clipboard.writeText(url);
-      setFlash("Plan link copied · expires in 2 hours");
-    } catch {
-      setFlash(`Plan ready: ${url}`);
-    }
-  };
-
-  const cityUi = CITY_UI[cityId];
-  const talkingAll = CITY_IDS.reduce((n, id) => n + (stats[id]?.talking ?? 0), 0);
 
   return (
     <main
@@ -398,139 +56,29 @@ export default function Menu() {
         } as CSSProperties
       }
     >
-      <section className="menu-left">
-        <div className="menu-pane">
-          <header className="menu-hero">
-            <h1 className="brand-hero">
-              India <em>IRL</em>
-            </h1>
-            <p className="city-line">
-              Hang out in <strong>{city.name}</strong>
-            </p>
-            <p className="hook-line">Build a look. Pick a plaza. Walk into a live room.</p>
-            <p className="live-pill">
-              <span className="live-dot" />
-              {honestHeadcount(meetId ? here : totalOnline, meetId ? talking : talkingAll, place)}
-            </p>
-            {joins.length > 0 ? (
-              <div className="join-ticker" aria-live="polite">
-                {joins.slice(0, 2).map((j, i) => (
-                  <span key={`${j.name}-${j.at}-${i}`}>
-                    {j.name} → {j.meet ? city.meets.find((m) => m.id === j.meet)?.label ?? j.meet : city.name}
-                  </span>
-                ))}
-              </div>
-            ) : null}
-          </header>
-
-          <div className="vibe-strip" title={`${info.into}/${info.need} vibe · ${done}/5 missions`}>
-            <strong>Lv {info.level}</strong>
-            <span>{localTitle || info.title}</span>
-            <div className="xp-bar" aria-hidden>
-              <i style={{ width: `${Math.round(info.progress * 100)}%` }} />
-            </div>
-            <em className={vibe.streak > 0 ? "on" : ""}>{vibe.streak || 0}d</em>
-          </div>
-
-          <label className="field">
-            <span>Your name</span>
-            <input
-              value={name}
-              maxLength={16}
-              placeholder="e.g. Aarav"
-              onChange={(e) => useGame.setState({ name: e.target.value.replace(/[<>]/g, "") })}
-              onKeyDown={(e) => e.key === "Enter" && go()}
-            />
-          </label>
-
-          <div className="city-pick">
-            <span className="meets-label">City</span>
-            <div className="cities">
-              {CITY_IDS.map((id) => {
-                const c = CITIES[id];
-                const ui = CITY_UI[id];
-                const n = stats[id]?.online ?? 0;
-                const t = stats[id]?.talking ?? 0;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    className={id === cityId ? "city on" : "city"}
-                    data-city={id}
-                    onClick={() => useGame.setState({ cityId: id, meetId: null })}
-                  >
-                    <i style={{ background: ui.art }} aria-hidden />
-                    <div className="city-copy">
-                      <b>{c.name}</b>
-                      <small>{ui.nick}</small>
-                      <span>{ui.landmark}</span>
-                    </div>
-                    <em className={n > 0 ? "hot" : ""}>
-                      {n > 0 ? `${n} online${t > 0 ? ` · ${t} mic` : ""}` : "Be first"}
-                    </em>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="city-insight">
-              <p className="city-mood">
-                <strong>{cityUi.mood}</strong>
-                <span>{city.tagline}</span>
-              </p>
-              <CityMapThumb cityId={cityId} meetId={meetId} />
-            </div>
-          </div>
-
-          <div className="meets">
-            <span className="meets-label">Spawn</span>
-            <div className="meet-row">
-              <button type="button" className={!meetId ? "chip on" : "chip"} onClick={() => useGame.setState({ meetId: null })}>
-                City spawn
-              </button>
-              {city.meets.map((m) => {
-                const ms = cityStat?.meets?.[m.id];
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    className={meetId === m.id ? "chip on" : "chip"}
-                    title={m.blurb}
-                    onClick={() => useGame.setState({ meetId: m.id })}
-                  >
-                    {m.label}
-                    {ms && ms.n > 0 ? ` · ${ms.n}` : ""}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {plan ? (
-            <p className="plan-status">
-              Plan {plan.expired ? "expired" : "live"} · {plan.joined.length} joined
-              {!plan.expired ? ` · ends ${new Date(plan.expiresAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}` : ""}
-              {plan.joined.length ? ` · ${plan.joined.slice(0, 4).join(", ")}` : ""}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="enter-block">
-          <button className="play pulse" disabled={!ready} onClick={go}>
-            {ready ? `Enter ${place}` : "Name yourself to enter"}
-          </button>
-          <div className="invite-row">
-            <button type="button" className="ghost" onClick={copyInvite}>
-              {copied ? "Link copied" : "Copy invite"}
-            </button>
-            <button type="button" className="ghost" onClick={shareWhatsApp}>
-              WhatsApp
-            </button>
-            <button type="button" className="ghost" onClick={startPlan}>
-              Start a plan
-            </button>
-          </div>
-        </div>
-      </section>
+      <MenuSetup
+        name={name}
+        cityId={cityId}
+        meetId={meetId}
+        stats={stats}
+        vibe={vibe}
+        plan={plan}
+        localTitle={localTitle}
+        ready={ready}
+        place={place}
+        copied={copied}
+        onEnter={() => enterGame(name, look, cityId, vibe)}
+        onCopy={() => {
+          void copyInviteLink(cityId, meetId, setFlash).then((ok) => {
+            if (ok) {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2200);
+            }
+          });
+        }}
+        onWhatsApp={() => openWhatsAppShare({ cityId, meetId, place, here, talking })}
+        onPlan={() => void startMeetPlan({ cityId, meetId, name, onPlan: setPlan, onFlash: setFlash })}
+      />
 
       <section className="menu-stage">
         <div className="stage-wash" aria-hidden />
@@ -549,88 +97,17 @@ export default function Menu() {
         </div>
       </section>
 
-      <section className="menu-right">
-        <nav className="tabs" aria-label="Customize">
-          {TABS.map((t) => (
-            <button key={t} className={t === tab ? "tab on" : "tab"} onClick={() => setTab(t)}>
-              {t}
-            </button>
-          ))}
-        </nav>
-
-        <div className="menu-pane">
-          {tab === "Body" ? (
-            <div className="group">
-              <h3>Build</h3>
-              <Chips names={BODY_NAMES} value={look.body} onPick={(i) => tweak({ body: i })} />
-              <h3>Skin tone</h3>
-              <Swatches colors={SKIN_TONES} value={look.skin} onPick={(i) => tweak({ skin: i })} />
-            </div>
-          ) : null}
-
-          {tab === "Hair" ? (
-            <div className="group">
-              <h3>Style</h3>
-              <Chips names={HAIR_NAMES} value={look.hair} onPick={(i) => tweak({ hair: i })} />
-              <h3>Color</h3>
-              <Swatches colors={HAIR_COLORS} value={look.hairColor} onPick={(i) => tweak({ hairColor: i })} />
-            </div>
-          ) : null}
-
-          {tab === "Outfit" ? (
-            <div className="group">
-              <h3>Top</h3>
-              <Chips names={TOP_NAMES} value={look.top} onPick={(i) => tweak({ top: i })} />
-              <Swatches colors={TOP_COLORS} value={look.topColor} onPick={(i) => tweak({ topColor: i })} />
-              <h3>Bottom</h3>
-              <Chips names={BOTTOM_NAMES} value={look.bottom} onPick={(i) => tweak({ bottom: i })} />
-              <Swatches colors={BOTTOM_COLORS} value={look.bottomColor} onPick={(i) => tweak({ bottomColor: i })} />
-              <h3>Footwear</h3>
-              <Chips names={SHOE_NAMES} value={look.shoe} onPick={(i) => tweak({ shoe: i })} />
-              <Swatches colors={SHOE_COLORS} value={look.shoeColor} onPick={(i) => tweak({ shoeColor: i })} />
-            </div>
-          ) : null}
-
-          {tab === "Extras" ? (
-            <div className="group">
-              <h3>Accessories</h3>
-              <div className="chips">
-                {ACCESSORIES.map((a) => (
-                  <button
-                    key={a.bit}
-                    className={look.acc & a.bit ? "chip on" : "chip"}
-                    onClick={() => {
-                      let next = look.acc ^ a.bit;
-                      if (a.bit === 8 && next & 8) next &= ~256;
-                      if (a.bit === 256 && next & 256) next &= ~8;
-                      tweak({ acc: next });
-                    }}
-                  >
-                    {a.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
-
-        <div className="menu-actions">
-          <button
-            className="ghost"
-            onClick={() => {
-              useGame.setState({ look: randomLook() });
-              setPulse((p) => p + 1);
-              setVibe(noteLookTweak());
-              setFlash("Random drip — keep or tweak");
-            }}
-          >
-            Surprise me
-          </button>
-          <button className="ghost" onClick={() => useGame.setState({ look: DEFAULT_LOOK })}>
-            Reset
-          </button>
-        </div>
-      </section>
+      <LookControls
+        look={look}
+        tab={tab}
+        setTab={setTab}
+        tweak={tweak}
+        onSurprise={() => {
+          setPulse((p) => p + 1);
+          setVibe(noteLookTweak());
+          setFlash("Random drip — keep or tweak");
+        }}
+      />
 
       {flash ? <div className="menu-flash">{flash}</div> : null}
     </main>

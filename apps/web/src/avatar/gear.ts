@@ -1,7 +1,6 @@
 /** Head accessories — glasses, headphones, AirPods, bindi, beard, hoops. */
 import type { GeoBuilder } from "../gfx/geo";
 import { darker, EAR, FACE_Z, HC, SKULL } from "./parts";
-import * as THREE from "three";
 
 const HP = "#1a1a1c";
 const HP_METAL = "#3a3a40";
@@ -68,12 +67,31 @@ export function buildBindi(hg: GeoBuilder): void {
   hg.sphere(0.0075, "#c1121f", { pos: [0, HC + 0.068, FACE_Z + 0.002] }, 8);
 }
 
+/**
+ * Clay Memoji beard — thin jaw fringe that hugs the chin (no balloon pads).
+ */
 export function buildBeard(hg: GeoBuilder, hair: string): void {
-  hg.add(
-    new THREE.SphereGeometry(0.14, 16, 12, 0, Math.PI * 2, Math.PI * 0.55, Math.PI * 0.4),
-    hair,
-    { pos: [0, HC - 0.025, 0.012], scale: [0.9, 1.02, 0.96] },
-  );
+  const shade = darker(hair, 0.9);
+
+  // Wide thin fringe hugging the chin (slightly into the face plane)
+  hg.sphere(0.058, hair, {
+    pos: [0, HC - 0.1, FACE_Z - 0.042],
+    scale: [1.48, 0.45, 0.5],
+  }, 16);
+  hg.sphere(0.028, shade, {
+    pos: [0, HC - 0.118, FACE_Z - 0.025],
+    scale: [1.0, 0.48, 0.5],
+  }, 12);
+  for (const sx of [1, -1] as const) {
+    hg.sphere(0.022, hair, {
+      pos: [sx * 0.06, HC - 0.08, FACE_Z - 0.048],
+      scale: [0.8, 0.65, 0.5],
+    }, 10);
+  }
+  hg.sphere(0.015, hair, {
+    pos: [0, HC - 0.038, FACE_Z - 0.01],
+    scale: [1.5, 0.28, 0.38],
+  }, 10);
 }
 
 export function buildHoops(hg: GeoBuilder): void {

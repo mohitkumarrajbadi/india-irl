@@ -1,0 +1,135 @@
+.minimap-btn {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+.minimap {
+  display: block;
+  border-radius: 50%;
+  border: 2px solid rgba(243, 239, 228, 0.35);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+}
+
+.minimap-btn:hover .minimap,
+.minimap-btn:focus-visible .minimap {
+  border-color: var(--marigold);
+}
+
+.minimap-hint {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(243, 239, 228, 0.65);
+}
+
+.map-open-btn {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(231, 197, 106, 0.35);
+  background: rgba(231, 197, 106, 0.1);
+  color: var(--cream);
+  font-size: 11px;
+}
+
+.map-open-btn:hover {
+  background: rgba(231, 197, 106, 0.18);
+}
+
+.map-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(8, 12, 8, 0.72);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+}
+
+.map-preview-card {
+  width: min(960px, 100%);
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(243, 239, 228, 0.16);
+  background: rgba(14, 20, 14, 0.94);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.map-preview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.map-preview-head h2 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: 0.02em;
+}
+
+.map-preview-head .eyebrow {
+  margin: 0 0 2px;
+  color: var(--marigold);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.map-close {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(243, 239, 228, 0.22);
+  background: rgba(243, 239, 228, 0.08);
+  font-size: 12px;
+}
+
+.map-preview-canvas {
+  width: 100%;
+  max-height: min(70vh, 720px);
+  border-radius: 12px;
+  border: 1px solid rgba(243, 239, 228, 0.12);
+  background: #121812;
+}
+
+.map-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  font-size: 11px;
+  color: rgba(243, 239, 228, 0.78);
+}
+
+.map-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.map-legend .leg {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.map-legend .leg.you { background: #fff; }
+.map-legend .leg.peer { background: #f08a5d; }
+.map-legend .leg.meet { background: #46d6c4; border-radius: 2px; transform: rotate(45deg); }
+.map-legend .leg.land { background: #e7c56a; }
+.map-legend .leg.metro { background: #c44; border-radius: 2px; }
+.map-legend .leg.job { background: #e7c56a; height: 3px; width: 14px; border-radius: 2px; }
+

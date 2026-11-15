@@ -2,81 +2,17 @@
  * Render / sim budget for a smooth browser experience.
  * Auto picks Low on weak devices and promotes/demotes from measured FPS.
  */
-export type QualityId = "auto" | "low" | "medium" | "high";
+import {
+  QUALITY_PRESETS,
+  type QualityId,
+  type QualitySettings,
+  type QualityState,
+} from "./quality-presets";
 
-export type QualitySettings = {
-  id: Exclude<QualityId, "auto">;
-  /** Max device pixel ratio. */
-  dpr: number;
-  shadows: boolean;
-  shadowMap: number;
-  shadowRange: number;
-  antialias: boolean;
-  /** AI traffic counts: auto, scooter, car, bus, truck. */
-  traffic: [number, number, number, number, number];
-  /** Hide remote avatars beyond this distance (m). */
-  avatarCull: number;
-  /** Cast avatar shadows within this distance (m). */
-  avatarShadow: number;
-  /** Show name tags within this distance (m). */
-  nameTag: number;
-  /** Camera far plane. */
-  cameraFar: number;
-  fogDensity: number;
-};
-
-export const QUALITY_PRESETS: Record<Exclude<QualityId, "auto">, QualitySettings> = {
-  low: {
-    id: "low",
-    dpr: 1,
-    shadows: false,
-    shadowMap: 512,
-    shadowRange: 28,
-    antialias: false,
-    traffic: [5, 6, 6, 1, 1],
-    avatarCull: 90,
-    avatarShadow: 0,
-    nameTag: 28,
-    cameraFar: 520,
-    fogDensity: 0.0044,
-  },
-  medium: {
-    id: "medium",
-    dpr: 1.35,
-    shadows: true,
-    shadowMap: 1024,
-    shadowRange: 38,
-    antialias: true,
-    traffic: [8, 10, 10, 2, 2],
-    avatarCull: 130,
-    avatarShadow: 32,
-    nameTag: 34,
-    cameraFar: 720,
-    fogDensity: 0.0038,
-  },
-  high: {
-    id: "high",
-    dpr: 1.75,
-    shadows: true,
-    shadowMap: 2048,
-    shadowRange: 46,
-    antialias: true,
-    traffic: [10, 14, 14, 3, 3],
-    avatarCull: 170,
-    avatarShadow: 45,
-    nameTag: 38,
-    cameraFar: 900,
-    fogDensity: 0.0036,
-  },
-};
+export type { QualityId, QualitySettings, QualityState } from "./quality-presets";
+export { QUALITY_PRESETS } from "./quality-presets";
 
 const STORAGE = "india-irl:quality:v1";
-
-export type QualityState = {
-  preference: QualityId;
-  /** Resolved preset currently applied. */
-  active: QualitySettings;
-};
 
 function weakDevice(): boolean {
   if (typeof navigator === "undefined") return false;
@@ -139,10 +75,7 @@ export function cycleQuality(): QualitySettings {
   return applyQuality(order[(i + 1) % order.length]);
 }
 
-/**
- * Auto mode: demote if FPS stays low, promote if it stays high.
- * Call ~4 Hz from the HUD sample path.
- */
+/** Auto mode: demote if FPS stays low, promote if it stays high. */
 export function noteFps(fps: number): void {
   if (quality.preference !== "auto") return;
   const cur = quality.active.id;
@@ -155,7 +88,6 @@ export function noteFps(fps: number): void {
   }
 }
 
-/** Human label for toasts / HUD. */
 export function qualityLabel(): string {
   if (quality.preference === "auto") return `Auto (${quality.active.id})`;
   return quality.active.id[0].toUpperCase() + quality.active.id.slice(1);

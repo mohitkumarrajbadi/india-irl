@@ -1,32 +1,13 @@
 import * as THREE from "three";
 import { labelTexture } from "../gfx/textures";
-import { SPECS, seatWorld } from "../vehicles/specs";
 import { createVehicle, type VehicleObject } from "../vehicles/object";
 import type { CityConfig } from "../world/types";
-import { quality } from "../game/quality";
 import { TOP_COLORS, type Look } from "./appearance";
-import { buildRig, poseRig, SEAT, SEAT_HIP_OFFSET, type Rig } from "./rig";
+import { applyActorFrame } from "./actor-frame";
+import type { ActorFrame } from "./actor-types";
+import { buildRig, type Rig } from "./rig";
 
-export type ActorFrame = {
-  x: number;
-  z: number;
-  yaw: number;
-  speed: number;
-  /** 0 on foot, 1..3 vehicle kind. */
-  vehicle: number;
-  seat: number;
-  emote: number;
-  emoteT: number;
-  /** Riding in someone else's vehicle: x/z are already the seat position. */
-  passenger: boolean;
-  roll: number;
-  /** Ground height, used for the jump arc. */
-  y: number;
-  /** Turn indicators: -1 left, 0 off, 1 right. */
-  blinker?: -1 | 0 | 1;
-};
-
-const seatPos = { x: 0, y: 0, z: 0 };
+export type { ActorFrame } from "./actor-types";
 
 /**
  * One visible player: avatar rig, optional vehicle, name tag and chat bubble.
@@ -47,7 +28,6 @@ export class Actor {
   private tagTexture: THREE.Texture | null = null;
   private readonly cfg: CityConfig;
   private readonly look: Look;
-  private tagHeight = 2;
   private lodSkip = 0;
 
   constructor(look: Look, name: string, cfg: CityConfig) {
@@ -103,89 +83,32 @@ export class Actor {
     }
   }
 
-  /**
-   * @param lod 0 near (full), 1 mid (half-rate pose), 2 far (pose every 3rd frame, no vehicle rebuild churn)
-   */
   update(f: ActorFrame, dt: number, now: number, camX: number, camZ: number, lod = 0): void {
-    const dx = f.x - camX;
-    const dz = f.z - camZ;
-    const dist2 = dx * dx + dz * dz;
-    const q = quality.active;
-    const cull = q.avatarCull;
-    if (dist2 > cull * cull) {
-      this.group.visible = false;
-      return;
-    }
-    this.group.visible = true;
-    const shadowR = q.avatarShadow;
-    const wantShadow = lod === 0 && shadowR > 0 && dist2 < shadowR * shadowR;
-    if (wantShadow !== this.shadows) {
-      this.shadows = wantShadow;
-      for (const m of this.rig.meshes) m.castShadow = wantShadow && m !== this.rig.cup;
-    }
-
-    this.time += dt;
-    const driving = f.vehicle > 0 && !f.passenger;
-    this.ensureVehicle(driving ? f.vehicle : 0);
-
-    const rigRoot = this.rig.root;
-    let seat: number = SEAT.stand;
-    let tagY = this.rig.height + 0.32;
-    this.group.position.set(f.x, 0, f.z);
-    this.group.rotation.y = 0;
-
-    if (driving && this.vehicle) {
-      const spec = SPECS[f.vehicle as 1 | 2 | 3];
-      this.vehicle.root.position.set(0, 0, 0);
-      this.vehicle.root.rotation.y = f.yaw;
-      this.vehicle.tilt.rotation.z = lod === 0 ? f.roll : 0;
-      const side = f.blinker ?? 0;
-      const flash = side !== 0 && Math.floor(now / 350) % 2 === 0;
-      this.vehicle.setBlinkers(side, flash);
-      seatWorld(spec, 0, 0, 0, f.yaw, seatPos);
-      rigRoot.position.set(seatPos.x, spec.seats[0].y - SEAT_HIP_OFFSET, seatPos.z);
-      rigRoot.rotation.set(0, f.yaw, lod === 0 ? f.roll * 0.8 : 0);
-      seat = spec.seats[0].pose;
-      tagY = f.vehicle === 3 ? 2.15 : f.vehicle === 1 ? 2.35 : this.rig.height + 0.42;
-    } else if (f.passenger && f.vehicle > 0) {
-      const spec = SPECS[f.vehicle as 1 | 2 | 3];
-      const s = spec.seats[Math.min(f.seat, spec.seats.length - 1)];
-      rigRoot.position.set(0, s.y - SEAT_HIP_OFFSET, 0);
-      rigRoot.rotation.set(0, f.yaw, 0);
-      seat = s.pose;
-      tagY = f.vehicle === 3 ? 2.15 : f.vehicle === 1 ? 2.35 : this.rig.height + 0.42;
-    } else {
-      rigRoot.position.set(0, f.y, 0);
-      rigRoot.rotation.set(0, f.yaw, 0);
-      this.phase += f.speed * dt * 2.15;
-    }
-
-    // Mid/far: skip most pose work — position still updates every frame.
-    this.lodSkip += 1;
-    const poseEvery = lod === 0 ? 1 : lod === 1 ? 2 : 3;
-    if (this.lodSkip % poseEvery === 0) {
-      poseRig(
-        this.rig,
-        {
-          phase: this.phase,
-          speed: seat === SEAT.stand ? f.speed : 0,
-          emote: lod < 2 ? f.emote : 0,
-          emoteT: f.emoteT,
-          seat,
-          time: this.time,
-          lean: lod === 0 ? f.roll : 0,
-        },
-        dt * poseEvery,
-      );
-    }
-
-    this.tag.position.set(0, tagY, 0);
-    const tagR = q.nameTag;
-    this.tag.visible = lod < 2 && dist2 < tagR * tagR;
-    if (this.bubble.visible) {
-      if (now > this.bubbleUntil || dist2 > 60 * 60) this.bubble.visible = false;
-      this.bubble.position.set(0, tagY + 0.3, 0);
-    }
+    applyActorFrame(
+      {
+        group: this.group,
+        rig: this.rig,
+        vehicle: this.vehicle,
+        tag: this.tag,
+        bubble: this.bubble,
+        phase: this.phase,
+        time: this.time,
+        shadows: this.shadows,
+        bubbleUntil: this.bubbleUntil,
+        lodSkip: this.lodSkip,
+        ensureVehicle: (k) => this.ensureVehicle(k),
+        setPhase: (n) => { this.phase = n; },
+        setTime: (n) => { this.time = n; },
+        setShadows: (v) => { this.shadows = v; },
+        setLodSkip: (n) => { this.lodSkip = n; },
+      },
+      f,
+      dt,
+      now,
+      camX,
+      camZ,
+      lod,
+    );
   }
 
   dispose(): void {

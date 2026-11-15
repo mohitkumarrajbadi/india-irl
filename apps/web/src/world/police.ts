@@ -2,28 +2,9 @@ import { clamp } from "../lib/math.ts";
 import { between, mulberry32, pick, type Rng } from "../lib/rng.ts";
 import { crashLog } from "../game/crash.ts";
 import type { CityData } from "./types.ts";
+import { CITY_COPS, type Cop } from "./police-types.ts";
 
-export type Cop = {
-  x: number;
-  z: number;
-  yaw: number;
-  speed: number;
-  phase: number;
-  state: "patrol" | "respond" | "ticket";
-  tx: number;
-  tz: number;
-  /** performance.now() deadline for ticket linger / patrol retarget. */
-  until: number;
-  /** Crash event timestamp this cop is answering, or 0. */
-  crashAt: number;
-};
-
-const CITY_COPS: Record<string, number> = {
-  bengaluru: 5,
-  pune: 4,
-  hyderabad: 5,
-  gurugram: 6,
-};
+export type { Cop } from "./police-types.ts";
 
 /**
  * Local traffic-police sim. When a crash is reported, the nearest free
@@ -38,16 +19,11 @@ export class PoliceSim {
   constructor(city: CityData) {
     this.rng = mulberry32(city.config.seed ^ 0xc0ffee11);
     const n = CITY_COPS[city.config.id] ?? 4;
-    // Prefer arterial signal / auto-stand corners as patrol posts.
     for (const e of city.extras) {
       if (e.v === 6 || e.v === 8) this.spots.push({ x: e.x, z: e.z });
     }
-    for (const m of city.meets) {
-      this.spots.push({ x: m.x, z: m.z });
-    }
-    if (this.spots.length === 0) {
-      this.spots.push({ x: city.spawn.x, z: city.spawn.z });
-    }
+    for (const m of city.meets) this.spots.push({ x: m.x, z: m.z });
+    if (this.spots.length === 0) this.spots.push({ x: city.spawn.x, z: city.spawn.z });
     for (let i = 0; i < n; i += 1) {
       const s = this.spots[i % this.spots.length];
       const jitter = between(this.rng, -6, 6);
@@ -75,7 +51,6 @@ export class PoliceSim {
     c.crashAt = 0;
   }
 
-  /** Dispatch free cops to recent severe crashes. */
   private dispatch(now: number): void {
     for (const ev of crashLog) {
       if (ev.severity < 0.28) continue;
@@ -100,16 +75,12 @@ export class PoliceSim {
       best.crashAt = ev.at;
       best.until = now + 18_000;
     }
-    // Cap handled set.
     if (this.handled.size > 24) {
-      const keep = [...this.handled].slice(-12);
-      this.handled = new Set(keep);
+      this.handled = new Set([...this.handled].slice(-12));
     }
   }
 
-  /**
-   * @returns true once when a cop just arrives at a crash (for toast).
-   */
+  /** @returns true once when a cop just arrives at a crash (for toast). */
   update(dt: number, now: number): boolean {
     this.dispatch(now);
     let arrived = false;
@@ -119,7 +90,6 @@ export class PoliceSim {
         if (now > c.until) this.retargetPatrol(c);
         continue;
       }
-
       const dx = c.tx - c.x;
       const dz = c.tz - c.z;
       const dist = Math.hypot(dx, dz);
@@ -129,12 +99,9 @@ export class PoliceSim {
           c.until = now + 7_000 + this.rng() * 4_000;
           c.speed = 0;
           arrived = true;
-        } else {
-          this.retargetPatrol(c);
-        }
+        } else this.retargetPatrol(c);
         continue;
       }
-
       const inv = 1 / dist;
       const step = Math.min(dist, c.speed * dt);
       c.x += dx * inv * step;
@@ -145,11 +112,7 @@ export class PoliceSim {
       while (dy < -Math.PI) dy += Math.PI * 2;
       c.yaw += clamp(dy, -4.5 * dt, 4.5 * dt);
       c.phase += c.speed * dt * 5.5;
-
-      if (c.state === "respond" && now > c.until) {
-        // Gave up / scene cleared.
-        this.retargetPatrol(c);
-      }
+      if (c.state === "respond" && now > c.until) this.retargetPatrol(c);
     }
     return arrived;
   }

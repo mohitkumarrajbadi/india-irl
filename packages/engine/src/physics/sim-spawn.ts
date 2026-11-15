@@ -54,14 +54,16 @@ export function spawnVehicleEntity(
   const tuning = tuningFor(kind as VehicleKind);
   const { hx, hy, hz } = chassisHalfExtents(kind);
   // CCD: continuous collision — prevents tunneling at high speed / frame skips.
+  // Angular damping scales with class — bikes snappier, cabs settle sooner.
+  const angDamp = kind === 2 ? 0.85 : kind === 3 ? 1.45 : 1.2;
   const body = world.createRigidBody(
     rapier.RigidBodyDesc.dynamic()
-      .setTranslation(x, y + hy, z)
+      .setTranslation(x, y + hy + (tuning.comY - hy) * 0.15, z)
       .setRotation(quatFromYaw(yaw))
       .setCanSleep(false)
       .setCcdEnabled(true)
       .setLinearDamping(0.3)
-      .setAngularDamping(1.2)
+      .setAngularDamping(angDamp)
       .setAdditionalMass(tuning.mass),
   );
   const collider = world.createCollider(

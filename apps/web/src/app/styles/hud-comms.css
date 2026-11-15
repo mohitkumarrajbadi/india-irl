@@ -1,0 +1,99 @@
+.emote-wheel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 220px;
+  height: 220px;
+  pointer-events: auto;
+  z-index: 8;
+}
+
+.emote-wheel-hint {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  font-size: 11px;
+  color: rgba(243, 239, 228, 0.7);
+  text-align: center;
+  pointer-events: none;
+}
+
+.emote-wheel-ring {
+  position: absolute;
+  inset: 0;
+}
+
+.emote-slot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 88px;
+  margin: -28px 0 0 -44px;
+  padding: 10px 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(231, 197, 106, 0.45);
+  background: rgba(12, 16, 12, 0.82);
+  color: var(--cream);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+}
+
+.emote-slot:hover {
+  background: rgba(231, 197, 106, 0.28);
+  color: #fff6d8;
+}
+
+.emote-slot-key {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--marigold);
+}
+
+.voice-btn {
+  appearance: none;
+  margin-top: 8px;
+  width: 100%;
+  border: 1px solid rgba(243, 239, 228, 0.18);
+  background: rgba(0, 0, 0, 0.28);
+  color: rgba(243, 239, 228, 0.85);
+  border-radius: 10px;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  text-align: left;
+}
+
+.voice-btn.live {
+  border-color: rgba(70, 214, 196, 0.55);
+  background: rgba(70, 214, 196, 0.18);
+  color: #d8fff8;
+}
+
+.voice-btn.muted {
+  border-color: rgba(231, 197, 106, 0.45);
+  background: rgba(231, 197, 106, 0.12);
+  color: #f3efe4;
+}
+
+.meter {
+  top: 14px;
+  right: 14px;
+  width: 204px;
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  font-variant-numeric: tabular-nums;
+  pointer-events: auto;
+}
+

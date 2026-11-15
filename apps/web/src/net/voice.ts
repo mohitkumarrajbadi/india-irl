@@ -1,7 +1,18 @@
-import { live } from "@/game/runtime";
 import type { Wire } from "./transport";
+import {
+  VOICE_MAX_LINKS,
+  VOICE_RANGE,
+  type PositionalSink,
+  type SendFn,
+  type VoiceModeSender,
+  type VoiceUi,
+} from "./voice-const";
+import { VoiceMesh } from "./voice-mesh";
+import { tickVoiceMesh } from "./voice-tick";
 
-type VoiceModeSender = (on: boolean) => void;
+export { VOICE_MAX_LINKS, VOICE_RANGE } from "./voice-const";
+export type { PositionalSink, VoiceUi } from "./voice-const";
+
 let sendVoiceMode: VoiceModeSender = () => {};
 
 /** Wired from net/store so mic state reaches the relay for honest “talking” counts. */
@@ -9,66 +20,28 @@ export function setVoiceModeSender(fn: VoiceModeSender): void {
   sendVoiceMode = fn;
 }
 
-/** Hear / link only within this radius (meters). */
-export const VOICE_RANGE = 28;
-const VOICE_RANGE2 = VOICE_RANGE * VOICE_RANGE;
-/** Hard cap on simultaneous peer connections. */
-export const VOICE_MAX_LINKS = 6;
-
-const ICE: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19302" }];
-
-export type VoiceUi = {
-  on: boolean;
-  muted: boolean;
-  linked: number;
-  speaking: number;
-  error: string;
-};
-
-type SendFn = (msg: Wire) => void;
-
-type Link = {
-  pc: RTCPeerConnection;
-  audio: HTMLAudioElement;
-  makingOffer: boolean;
-  ignoreOffer: boolean;
-  polite: boolean;
-};
-
-/** Optional 3D sink (Phase E). When set, HTML element volume stays 0. */
-export type PositionalSink = {
-  onGain: (peerId: string, x: number, z: number, gain: number, stream: MediaStream | null) => void;
-  onDrop: (peerId: string) => void;
-};
-
 /**
  * Proximity voice: small WebRTC mesh, gated by distance.
  * Signaling rides the same relay / BroadcastChannel as game state.
- * Not a full SFU — good for nearby hangouts (≤6 voices). Swap later for LiveKit if needed.
  */
 export class VoiceChat {
   on = false;
   muted = true;
-  /** Mute hearing others (speaker), independent of mic. */
   speakerMuted = false;
   error = "";
   linked = 0;
   speaking = 0;
 
   private stream: MediaStream | null = null;
-  private links = new Map<string, Link>();
-  private send: SendFn = () => {};
-  private selfId = "";
   private listeners = new Set<() => void>();
-  private positional: PositionalSink | null = null;
+  private readonly mesh = new VoiceMesh();
 
   setSender(selfId: string, send: SendFn): void {
-    this.selfId = selfId;
-    this.send = send;
+    this.mesh.configure(selfId, send, () => this.emit());
   }
 
   setPositionalSink(sink: PositionalSink | null): void {
-    this.positional = sink;
+    this.mesh.setPositionalSink(sink);
   }
 
   subscribe(fn: () => void): () => void {
@@ -77,23 +50,17 @@ export class VoiceChat {
   }
 
   private emit(): void {
-    this.linked = this.links.size;
+    this.linked = this.mesh.links.size;
     for (const fn of this.listeners) fn();
   }
 
   ui(): VoiceUi {
-    return {
-      on: this.on,
-      muted: this.muted,
-      linked: this.linked,
-      speaking: this.speaking,
-      error: this.error,
-    };
+    return { on: this.on, muted: this.muted, linked: this.linked, speaking: this.speaking, error: this.error };
   }
 
   setSpeakerMuted(muted: boolean): void {
     this.speakerMuted = muted;
-    for (const link of this.links.values()) {
+    for (const link of this.mesh.links.values()) {
       if (muted) link.audio.volume = 0;
     }
     this.emit();
@@ -112,6 +79,7 @@ export class VoiceChat {
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
         video: false,
       });
+      this.mesh.setStream(this.stream);
       this.on = true;
       this.muted = false;
       this.applyMute();
@@ -129,9 +97,10 @@ export class VoiceChat {
     this.on = false;
     this.muted = true;
     this.error = "";
-    for (const id of [...this.links.keys()]) this.hangup(id, true);
+    this.mesh.hangupAll(true);
     this.stream?.getTracks().forEach((t) => t.stop());
     this.stream = null;
+    this.mesh.setStream(null);
     sendVoiceMode(false);
     this.emit();
   }
@@ -154,180 +123,16 @@ export class VoiceChat {
     });
   }
 
-  /**
-   * Call ~4–10 Hz from the game loop with peer positions.
-   * `dist2` optional override (hangout priority bias).
-   */
+  /** Call ~4–10 Hz from the game loop with peer positions. */
   tick(peers: { id: string; x: number; z: number; dist2?: number }[]): void {
-    if (!this.on || !this.stream) {
-      if (this.links.size) for (const id of [...this.links.keys()]) this.hangup(id, true);
-      return;
-    }
-
-    const scores: { id: string; d2: number }[] = [];
-    for (const p of peers) {
-      const d2 = p.dist2 ?? (p.x - live.x) ** 2 + (p.z - live.z) ** 2;
-      if (d2 <= VOICE_RANGE2) scores.push({ id: p.id, d2 });
-    }
-    scores.sort((a, b) => a.d2 - b.d2);
-    const want = new Set(scores.slice(0, VOICE_MAX_LINKS).map((s) => s.id));
-
-    for (const id of [...this.links.keys()]) {
-      if (!want.has(id)) this.hangup(id, true);
-    }
-    for (const id of want) {
-      if (!this.links.has(id)) void this.connect(id);
-    }
-
-    // Distance → volume (or PositionalAudio gain).
-    let speaking = 0;
-    for (const p of peers) {
-      const link = this.links.get(p.id);
-      if (!link) continue;
-      const d = Math.sqrt(p.dist2 ?? (p.x - live.x) ** 2 + (p.z - live.z) ** 2);
-      const vol = this.speakerMuted
-        ? 0
-        : d >= VOICE_RANGE
-          ? 0
-          : Math.max(0.05, Math.pow(1 - d / VOICE_RANGE, 1.35));
-      if (this.positional) {
-        link.audio.volume = 0;
-        const stream = (link.audio.srcObject as MediaStream | null) ?? null;
-        this.positional.onGain(p.id, p.x, p.z, vol, stream);
-      } else {
-        link.audio.volume = vol;
-      }
-      if (!link.audio.paused && vol > 0.08) speaking += 1;
-    }
-    if (speaking !== this.speaking) {
-      this.speaking = speaking;
+    tickVoiceMesh(this.mesh, this.on, this.stream, this.speakerMuted, peers, this.speaking, (n) => {
+      this.speaking = n;
       this.emit();
-    }
+    });
   }
 
   handleSignal(msg: Wire): void {
-    const from = typeof msg.id === "string" ? msg.id : "";
-    const to = typeof msg.to === "string" ? msg.to : "";
-    if (!from || (to && to !== this.selfId)) return;
-    if (msg.t === "vx") {
-      this.hangup(from, false);
-      return;
-    }
-    if (!this.on || !this.stream) return;
-    if (msg.t === "vo") void this.onOffer(from, String(msg.sdp ?? ""));
-    else if (msg.t === "va") void this.onAnswer(from, String(msg.sdp ?? ""));
-    else if (msg.t === "vi") void this.onIce(from, msg.candidate);
-  }
-
-  private async connect(peerId: string): Promise<void> {
-    if (this.links.has(peerId) || !this.stream) return;
-    const link = this.makeLink(peerId);
-    this.links.set(peerId, link);
-    this.emit();
-    // Only the impolite peer (higher id) starts the offer to avoid glare.
-    if (!link.polite) {
-      try {
-        link.makingOffer = true;
-        await link.pc.setLocalDescription(await link.pc.createOffer());
-        this.send({ t: "vo", to: peerId, sdp: link.pc.localDescription?.sdp ?? "" });
-      } catch {
-        this.hangup(peerId, true);
-      } finally {
-        link.makingOffer = false;
-      }
-    }
-  }
-
-  private makeLink(peerId: string): Link {
-    const polite = this.selfId < peerId;
-    const pc = new RTCPeerConnection({ iceServers: ICE });
-    const audio = document.createElement("audio");
-    audio.autoplay = true;
-    audio.setAttribute("playsinline", "true");
-    document.body.appendChild(audio);
-
-    const link: Link = { pc, audio, makingOffer: false, ignoreOffer: false, polite };
-
-    for (const track of this.stream!.getAudioTracks()) {
-      pc.addTrack(track, this.stream!);
-    }
-
-    pc.onicecandidate = (ev) => {
-      this.send({ t: "vi", to: peerId, candidate: ev.candidate ? ev.candidate.toJSON() : null });
-    };
-    pc.ontrack = (ev) => {
-      audio.srcObject = ev.streams[0] ?? new MediaStream([ev.track]);
-      void audio.play().catch(() => {
-        /* autoplay may need a gesture; enabling mic already counts */
-      });
-    };
-    pc.onconnectionstatechange = () => {
-      const st = pc.connectionState;
-      if (st === "failed" || st === "closed" || st === "disconnected") {
-        // Soft drop on disconnected; hard on failed/closed.
-        if (st !== "disconnected") this.hangup(peerId, false);
-      }
-    };
-    return link;
-  }
-
-  private async onOffer(from: string, sdp: string): Promise<void> {
-    if (!sdp || !this.stream) return;
-    let link = this.links.get(from);
-    if (!link) {
-      link = this.makeLink(from);
-      this.links.set(from, link);
-      this.emit();
-    }
-    const offerCollision = link.makingOffer || link.pc.signalingState !== "stable";
-    link.ignoreOffer = !link.polite && offerCollision;
-    if (link.ignoreOffer) return;
-    try {
-      await link.pc.setRemoteDescription({ type: "offer", sdp });
-      await link.pc.setLocalDescription(await link.pc.createAnswer());
-      this.send({ t: "va", to: from, sdp: link.pc.localDescription?.sdp ?? "" });
-    } catch {
-      this.hangup(from, true);
-    }
-  }
-
-  private async onAnswer(from: string, sdp: string): Promise<void> {
-    const link = this.links.get(from);
-    if (!link || !sdp) return;
-    try {
-      await link.pc.setRemoteDescription({ type: "answer", sdp });
-    } catch {
-      this.hangup(from, true);
-    }
-  }
-
-  private async onIce(from: string, candidate: unknown): Promise<void> {
-    const link = this.links.get(from);
-    if (!link) return;
-    try {
-      if (candidate) await link.pc.addIceCandidate(candidate as RTCIceCandidateInit);
-      else await link.pc.addIceCandidate();
-    } catch {
-      if (!link.ignoreOffer) {
-        /* ignore late ICE */
-      }
-    }
-  }
-
-  private hangup(peerId: string, notify: boolean): void {
-    const link = this.links.get(peerId);
-    if (!link) return;
-    this.links.delete(peerId);
-    this.positional?.onDrop(peerId);
-    try {
-      link.pc.close();
-    } catch {
-      /* ignore */
-    }
-    link.audio.srcObject = null;
-    link.audio.remove();
-    if (notify) this.send({ t: "vx", to: peerId });
-    this.emit();
+    this.mesh.handleSignal(msg, this.on);
   }
 }
 

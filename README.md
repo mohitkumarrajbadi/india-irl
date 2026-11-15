@@ -52,6 +52,8 @@ Body type, skin tone, hair style and colour, outfit and colour, and accessories 
 | E | Hop off, or hop in as a passenger next to another player's vehicle |
 | H | Horn |
 | Z / X / C / V | Wave, namaste, bhangra, chai break |
+| B / Y / U | Garba, groove, Bollywood (on foot) |
+| Tab | Emote wheel (1–9) |
 | R / G | Punch / kick nearby players (on foot) |
 | Enter | Chat (shows as a bubble above your head) |
 | T | Cycle time of day |

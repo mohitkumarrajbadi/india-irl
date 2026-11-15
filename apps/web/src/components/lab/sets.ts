@@ -11,25 +11,40 @@ export type LabItem = { obj: THREE.Object3D; label: string; width: number };
 export type LabSet = { items: LabItem[]; tick?: (dt: number, time: number) => void };
 
 const LOOKS: Partial<Look>[] = [
-  {},
-  { skin: 3, hair: 1, top: 3, topColor: 4, bottom: 5, bottomColor: 4, shoe: 2, shoeColor: 4, acc: 16 + 128 },
-  { skin: 4, hair: 4, top: 1, topColor: 2, bottom: 1, bottomColor: 1, shoe: 1, shoeColor: 1, acc: 32 },
-  { skin: 0, hair: 3, hairColor: 5, top: 0, topColor: 9, bottom: 2, bottomColor: 4, acc: 1 },
+  // Body types Lean · Regular · Broad (short sleeve / shirt / kurta)
+  { body: 0, skin: 1, hair: 8, hairColor: 0, top: 0, topColor: 9, bottom: 2, bottomColor: 0, shoe: 0 },
+  { body: 1, skin: 3, hair: 0, hairColor: 1, top: 1, topColor: 3, bottom: 1, bottomColor: 1, shoe: 1, shoeColor: 1 },
+  { body: 2, skin: 4, hair: 4, hairColor: 0, top: 3, topColor: 2, bottom: 1, bottomColor: 1, shoe: 1, shoeColor: 1 },
+  // Garment gallery
+  { skin: 3, hair: 1, top: 3, topColor: 4, bottom: 5, bottomColor: 4, shoe: 2, shoeColor: 4, acc: 16 },
+  { skin: 0, hair: 3, hairColor: 5, top: 2, topColor: 7, bottom: 0, bottomColor: 0, acc: 1 },
   { skin: 5, hair: 2, top: 4, topColor: 6, shoe: 2, shoeColor: 5, acc: 16 },
-  { skin: 2, hair: 5, top: 5, topColor: 7, bottom: 0, acc: 8 + 2 },
-  { skin: 6, hair: 7, hairColor: 1, top: 6, topColor: 3, bottom: 3, bottomColor: 3, shoe: 1, acc: 64 + 256 },
-  { skin: 1, hair: 9, top: 3, topColor: 5, bottom: 4, bottomColor: 7, shoe: 2 },
-  { skin: 3, hair: 6, top: 0, topColor: 0, bottom: 0, body: 2, acc: 4 + 32 + 1 },
-  { skin: 2, hair: 0, hairColor: 2, top: 1, topColor: 8, bottom: 1, bottomColor: 2, body: 0, shoe: 1, shoeColor: 4 },
+  { skin: 2, hair: 5, top: 5, topColor: 10, bottom: 0, shoe: 0, acc: 8 },
+  { skin: 6, hair: 7, hairColor: 1, top: 6, topColor: 3, bottom: 3, bottomColor: 3, shoe: 1, acc: 64 },
+  { skin: 1, hair: 9, top: 0, topColor: 5, bottom: 4, bottomColor: 7, shoe: 2 },
+  { skin: 3, hair: 6, top: 2, topColor: 0, bottom: 0, body: 2, shoe: 0, acc: 32 },
 ];
 
 export function avatarSet(emote: number): LabSet {
   const rigs: Rig[] = LOOKS.map((l) => buildRig({ ...DEFAULT_LOOK, ...l }));
+  // When emote=0, cycle gestures across the lineup so hands are easy to review.
+  const cycle = emote > 0 ? null : [0, 2, 1, 3, 7, 8, 9, 4, 1, 6];
   return {
     items: rigs.map((rig, i) => ({ obj: rig.root, label: `look ${i}`, width: 0.95 })),
     tick: (dt, time) => {
       rigs.forEach((rig, i) =>
-        poseRig(rig, { phase: 0, speed: 0, emote, emoteT: time, seat: 0, time: time + i * 1.3 }, dt),
+        poseRig(
+          rig,
+          {
+            phase: 0,
+            speed: 0,
+            emote: cycle ? cycle[i % cycle.length]! : emote,
+            emoteT: time,
+            seat: 0,
+            time: time + i * 1.3,
+          },
+          dt,
+        ),
       );
     },
   };

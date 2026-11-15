@@ -13,9 +13,12 @@ const KEY_CODE: Record<string, string> = {
   V: "KeyV",
   R: "KeyR",
   G: "KeyG",
+  B: "KeyB",
+  Y: "KeyY",
+  U: "KeyU",
 };
 
-/** Hold Tab radial — click or press 1–6 while open. */
+/** Hold Tab radial — click or press 1–9 while open. */
 export function EmoteWheel() {
   const open = useGame((s) => s.emoteWheel);
   if (!open) return null;

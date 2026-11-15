@@ -1,0 +1,57 @@
+import * as THREE from "three";
+import type { CityData } from "@/world/types";
+import type { DriveState, VehicleKind } from "@/vehicles/specs";
+import type { PlayerState } from "./types.ts";
+
+export function createPlayerState(city: CityData): PlayerState {
+  const yaw = city.spawn.yaw;
+  return {
+    mode: "foot",
+    x: city.spawn.x,
+    z: city.spawn.z,
+    y: 0,
+    vy: 0,
+    facing: yaw,
+    speed: 0,
+    actual: 0,
+    dir: new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)),
+    ds: { x: 0, z: 0, yaw: 0, speed: 0, steer: 0, roll: 0 } as DriveState,
+    kind: 0 as VehicleKind,
+    seat: 0,
+    rideWith: null,
+    emote: 0,
+    emoteStart: 0,
+    camYaw: yaw,
+    camPitch: 0.34,
+    zoom: 1,
+    idle: 0,
+    fov: 58,
+    keys: { w: false, a: false, s: false, d: false, shift: false, space: false },
+    mouseX: 0,
+    mouseY: 0,
+    sample: 0,
+    frames: 0,
+    send: 0,
+    sayHeard: 0,
+    lastSent: "",
+    hudKey: "",
+    ambient: "",
+    hangDone: false,
+    lastKind: 2,
+    parked: null,
+    worldParkedIndex: null,
+    kb: { x: 0, z: 0 },
+    coyote: 0,
+    stunUntil: 0,
+    fightCd: 0,
+    hp: 100,
+    chassisHp: 100,
+    crashCd: 0,
+    lastCrashToast: 0,
+    wastedUntil: 0,
+    shake: 0,
+    blinker: 0,
+    blinkerArmed: false,
+    pedCrushCd: 0,
+  };
+}

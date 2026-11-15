@@ -54,3 +54,35 @@ export function signalLampPhase(extraIndex: number, timeSec: number): LightPhase
   if (t < GREEN + AMBER) return "amber";
   return "red";
 }
+
+/**
+ * Lamp phase synced to the NPC junction controller.
+ * Finds the nearest junction and maps pole facing → approach dir (0..3).
+ */
+export function signalLampPhaseAt(
+  x: number,
+  z: number,
+  rot: number,
+  xs: readonly number[],
+  zs: readonly number[],
+  timeSec: number,
+): LightPhase {
+  let ni = 0;
+  let nj = 0;
+  let best = Infinity;
+  for (let i = 0; i < xs.length; i += 1) {
+    for (let j = 0; j < zs.length; j += 1) {
+      const dx = x - xs[i];
+      const dz = z - zs[j];
+      const d = dx * dx + dz * dz;
+      if (d < best) {
+        best = d;
+        ni = i;
+        nj = j;
+      }
+    }
+  }
+  // Cardinal facing from rot (arm over road → traffic that sees this head)
+  const dir = (((Math.round(rot / (Math.PI / 2)) % 4) + 4) % 4);
+  return signalPhase(ni, nj, dir, timeSec);
+}

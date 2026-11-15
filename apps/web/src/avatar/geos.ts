@@ -27,7 +27,10 @@ export type Geos = {
   torso: BufferGeometry;
   head: BufferGeometry;
   upperArm: BufferGeometry;
-  foreArm: BufferGeometry;
+  /** Left forearm + hand (thumb +X). */
+  foreArmL: BufferGeometry;
+  /** Right forearm + hand (thumb −X). */
+  foreArmR: BufferGeometry;
   thigh: BufferGeometry;
   shin: BufferGeometry;
   cup: BufferGeometry;
@@ -63,20 +66,25 @@ export function buildGeos(look: Look): Geos {
   if (look.acc & 32) buildBeard(hg, hair);
   if (look.acc & 128) buildHoops(hg);
 
-  const armR = (t === 2 ? 0.052 : 0.048) * Math.sqrt(bw);
+  const shortSleeve = t === 0 || t === 5 || saree;
+  const armR = (t === 2 || t === 6 ? 0.058 : 0.054) * Math.sqrt(bw);
   const ua = new GeoBuilder();
-  buildUpperArm(ua, armR, longSleeve || saree ? top : top);
-  const fa = new GeoBuilder();
-  buildForeArm(fa, armR, longSleeve ? top : skin, skin, look);
+  // Short sleeves ride on the arm mesh; long tops are solid fabric
+  buildUpperArm(ua, armR, shortSleeve ? skin : top, shortSleeve ? top : undefined);
+  const faL = new GeoBuilder();
+  buildForeArm(faL, armR, longSleeve ? top : skin, skin, look, 1);
+  const faR = new GeoBuilder();
+  buildForeArm(faR, armR, longSleeve ? top : skin, skin, look, -1);
 
-  const legR = (b === 5 ? 0.068 : 0.06) * Math.sqrt(bw);
+  const legR = (b === 5 ? 0.082 : b === 2 ? 0.074 : 0.072) * Math.sqrt(bw);
   const longLeg = b === 0 || b === 1 || b === 5;
-  const thighCol = longLeg || b === 2 ? bottom : skin;
-  const shinCol = longLeg ? bottom : skin;
+  // Kurta/saree: thighs match the tunic so dance poses never flash pant/skin through the hem
+  const thighCol = saree || t === 3 ? top : longLeg || b === 2 ? bottom : skin;
+  const shinCol = saree ? top : longLeg ? bottom : skin;
   const th = new GeoBuilder();
-  buildThigh(th, legR, saree ? skin : thighCol);
+  buildThigh(th, legR, thighCol, t === 3 || saree);
   const sh = new GeoBuilder();
-  buildShin(sh, legR * (b === 5 ? 1.05 : 1), saree ? skin : shinCol, shoeCol, look.shoe, skin);
+  buildShin(sh, legR * (b === 5 ? 1.05 : 1), shinCol, shoeCol, look.shoe, skin);
 
   const cup = new GeoBuilder();
   cup.cyl(0.03, 0.025, 0.06, "#f4f0e6", { pos: [0, 0, 0] }, 10);
@@ -86,12 +94,14 @@ export function buildGeos(look: Look): Geos {
     torso: tg.build(),
     head: hg.build(),
     upperArm: ua.build(),
-    foreArm: fa.build(),
+    foreArmL: faL.build(),
+    foreArmR: faR.build(),
     thigh: th.build(),
     shin: sh.build(),
     cup: cup.build(),
     height: (1.52 + 0.2 * HEAD_SCALE) * bh + (look.hair === 4 ? 0.1 : 0),
-    shoulder: torsoW + armR * 0.95,
-    hipX: 0.088 * bw,
+    // Seat sleeve/deltoid against the shoulder shelf without piercing the chest
+    shoulder: torsoW * 0.88 + armR * 0.4,
+    hipX: 0.1 * bw,
   };
 }

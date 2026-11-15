@@ -1,0 +1,25 @@
+/* Tablet: avatar stage on top, controls below */
+@media (max-width: 1100px) {
+  .menu {
+    --menu-pad: 14px;
+    --menu-gap: 12px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(280px, 46dvh) minmax(0, 1fr);
+    grid-template-areas:
+      "stage stage"
+      "left right";
+  }
+
+  .menu-stage { grid-area: stage; }
+  .menu-left { grid-area: left; }
+  .menu-right { grid-area: right; }
+
+  .brand-hero {
+    font-size: clamp(34px, 5vw, 44px);
+  }
+
+  .hook-line {
+    display: none;
+  }
+}
+

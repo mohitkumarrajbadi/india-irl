@@ -7,6 +7,8 @@ import { env, gameHour, updateEnv } from "@/gfx/env";
 import { makeHillGeometry, makeSkyMaterial } from "@/gfx/materials";
 import { quality } from "@/game/quality";
 import { live } from "@/game/runtime";
+import { tickWeather, weather } from "@/game/weather";
+import { terrainProfile } from "@/world/terrain-profile";
 import type { CityConfig } from "@/world/types";
 
 /** Sky dome, horizon hills, fog, and the sun/moon rig. Everything reads one `env` struct. */
@@ -20,9 +22,13 @@ export function Atmosphere({ config }: { config: CityConfig }) {
   const target = useMemo(() => new THREE.Object3D(), []);
   const haze = useMemo(() => new THREE.Color(config.skyline.haze), [config]);
   const hillTint = useMemo(() => new THREE.Color(config.skyline.hillColor), [config]);
+  const rainFog = useMemo(() => new THREE.Color("#8a9aaa"), []);
 
   const skyMat = useMemo(() => makeSkyMaterial(), []);
-  const hillGeo = useMemo(() => makeHillGeometry(config.skyline.hills, config.seed % 97), [config]);
+  const hillGeo = useMemo(() => {
+    const boost = terrainProfile(config.id).skyBoost;
+    return makeHillGeometry(Math.min(1, config.skyline.hills + boost), config.seed % 97);
+  }, [config]);
   const hillMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#789", side: THREE.BackSide, fog: false }), []);
 
   useEffect(() => {
@@ -35,16 +41,18 @@ export function Atmosphere({ config }: { config: CityConfig }) {
     };
   }, [scene, skyMat, hillGeo, hillMat]);
 
-  useFrame((state) => {
-    const e = updateEnv(gameHour(), haze, hillTint);
+  useFrame((state, delta) => {
+    const hour = gameHour();
+    tickWeather(Math.min(delta, 0.05), hour, config.id);
+    const e = updateEnv(hour, haze, hillTint);
     const q = quality.active;
     live.hour = e.hour;
     skyMat.uniforms.uTime.value = state.clock.elapsedTime;
 
     if (scene.fog) {
       const fog = scene.fog as THREE.FogExp2;
-      fog.color.copy(e.fog);
-      fog.density = q.fogDensity;
+      fog.color.copy(e.fog).lerp(rainFog, weather.fog * 0.55);
+      fog.density = q.fogDensity * (1 + weather.fog * 2.4 + weather.rain * 0.6);
     }
     sky.current?.position.copy(camera.position);
     if (hills.current) {
@@ -64,7 +72,7 @@ export function Atmosphere({ config }: { config: CityConfig }) {
       target.position.set(tx, 0, tz);
       s.position.set(tx + e.lightDir.x * 90, e.lightDir.y * 90, tz + e.lightDir.z * 90);
       s.color.copy(e.lightColor);
-      s.intensity = e.lightIntensity;
+      s.intensity = e.lightIntensity * (1 - weather.cloud * 0.55);
       if (q.shadows) {
         const cam = s.shadow.camera;
         cam.left = -range;

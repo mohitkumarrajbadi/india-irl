@@ -1,5 +1,7 @@
+import type { DestructibleSim } from "./destructible-sim";
 import type { StaticGrid } from "../lib/spatial";
 import type { Obstacle, TrafficSim } from "../vehicles/traffic";
+import type { AnimalSim } from "../world/animals";
 import type { PedestrianSim } from "../world/pedestrians";
 import type { PoliceSim } from "../world/police";
 import type { CityData } from "../world/types";
@@ -37,7 +39,9 @@ export const runtime = {
   grid: null as StaticGrid | null,
   traffic: null as TrafficSim | null,
   peds: null as PedestrianSim | null,
+  animals: null as AnimalSim | null,
   police: null as PoliceSim | null,
+  destructibles: null as DestructibleSim | null,
 };
 
 /** Things traffic should avoid, rebuilt each frame. */

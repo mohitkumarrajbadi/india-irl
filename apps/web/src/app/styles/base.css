@@ -1,0 +1,79 @@
+:root {
+  color-scheme: dark;
+  --ink: #141a12;
+  --cream: #f3efe4;
+  --line: rgba(243, 239, 228, 0.18);
+  --marigold: #e7c56a;
+  --chili: #e0623a;
+  --teal: #46d6c4;
+  --glass: rgba(18, 24, 16, 0.66);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  height: 100dvh;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+  background: #0f140e;
+  color: var(--cream);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  user-select: none;
+}
+
+button {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+
+kbd {
+  display: inline-block;
+  min-width: 1.9em;
+  padding: 0 6px;
+  border-radius: 5px;
+  background: rgba(243, 239, 228, 0.14);
+  border: 1px solid rgba(243, 239, 228, 0.2);
+  color: var(--cream);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  text-align: center;
+}
+
+.stage {
+  position: relative;
+  height: 100dvh;
+  background: #0f140e;
+}
+
+.stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.boot {
+  height: 100dvh;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(600px 360px at 50% 40%, rgba(231, 197, 106, 0.12), transparent 65%),
+    #0a0e0a;
+  color: var(--marigold);
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+

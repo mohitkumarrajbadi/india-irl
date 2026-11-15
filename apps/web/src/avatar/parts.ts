@@ -16,7 +16,8 @@ export const EYE = { x: 0.036, y: HC + 0.024, z: FACE_Z + 0.01 } as const;
 
 export const BODY_W = [0.86, 0.96, 1.12] as const;
 export const BODY_H = [1.02, 1, 0.98] as const;
-export const JOINT_COUNT = 17;
+/** 0–16 classic joints · 17–20 arm/elbow Y (palm twist for namaste / wave). */
+export const JOINT_COUNT = 21;
 
 export function darker(hex: string, k: number): string {
   const n = parseInt(hex.slice(1), 16);

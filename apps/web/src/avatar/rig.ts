@@ -6,7 +6,7 @@ import { avatarMat } from "./materials";
 import { BODY_H, HEAD_SCALE, HIP_Y, JOINT_COUNT, SEAT_HIP_OFFSET } from "./parts";
 
 export { HEAD_SCALE, HIP_Y, SEAT_HIP_OFFSET };
-export { EMOTES, SEAT, poseRig, type Pose } from "./pose";
+export { EMOTES, SEAT, isCombatEmote, isDanceEmote, poseRig, type Pose } from "./pose";
 
 export type Rig = {
   root: THREE.Group;
@@ -28,7 +28,7 @@ export type Rig = {
 };
 
 const cache = new Map<string, Geos>();
-const GEO_VER = "v9-memoji-sdf";
+const GEO_VER = "v31-body-outfit";
 
 export function buildRig(look: Look): Rig {
   const key = `${GEO_VER}:${lookKey(look)}`;
@@ -68,11 +68,19 @@ export function buildRig(look: Look): Rig {
   head.add(headRoot);
   body.add(head);
 
-  const lArm = grp(g.shoulder, 1.3);
-  const rArm = grp(-g.shoulder, 1.3);
-  const lElbow = grp(0, -0.24);
-  const rElbow = grp(0, -0.24);
-  const arms = [mesh(g.upperArm), mesh(g.upperArm), mesh(g.foreArm), mesh(g.foreArm)];
+  const lArm = grp(g.shoulder, 1.28);
+  const rArm = grp(-g.shoulder, 1.28);
+  // Nest deltoids into the torso shoulder shelf
+  lArm.position.z = 0.015;
+  rArm.position.z = 0.015;
+  const lElbow = grp(0, -0.26);
+  const rElbow = grp(0, -0.26);
+  // Y-first so palm twist (Y) doesn't fight elbow bend (X) during namaste / wave
+  lArm.rotation.order = "YXZ";
+  rArm.rotation.order = "YXZ";
+  lElbow.rotation.order = "YXZ";
+  rElbow.rotation.order = "YXZ";
+  const arms = [mesh(g.upperArm), mesh(g.upperArm), mesh(g.foreArmL), mesh(g.foreArmR)];
   lArm.add(arms[0]);
   rArm.add(arms[1]);
   lElbow.add(arms[2]);

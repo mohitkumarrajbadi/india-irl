@@ -1,0 +1,113 @@
+/* Phone: avatar hero, then setup + CTA, then customize */
+@media (max-width: 760px) {
+  .menu {
+    --menu-pad: 12px;
+    --menu-gap: 10px;
+    --radius-l: 22px;
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(210px, 34dvh) minmax(0, 1fr) minmax(150px, 28dvh);
+    grid-template-areas:
+      "stage"
+      "left"
+      "right";
+  }
+
+  .brand-hero {
+    font-size: clamp(28px, 8vw, 36px);
+  }
+
+  .hook-line,
+  .join-ticker,
+  .city-insight,
+  .meets,
+  .plan-status {
+    display: none;
+  }
+
+  .menu-pane {
+    gap: 10px;
+  }
+
+  .vibe-strip {
+    padding: 10px 12px;
+    gap: 6px 8px;
+  }
+
+  .cities {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .city {
+    grid-template-rows: 24px auto;
+  }
+
+  .city i {
+    height: 24px;
+  }
+
+  .city-copy {
+    padding: 8px 10px 10px;
+  }
+
+  .city span {
+    display: none;
+  }
+
+  .invite-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .invite-row .ghost {
+    min-height: 40px;
+    padding: 8px 4px;
+    font-size: 11px;
+  }
+
+  .play {
+    min-height: 48px;
+    font-size: 15px;
+  }
+
+  .enter-block {
+    gap: 8px;
+    padding-top: 8px;
+  }
+
+  .stage-badge {
+    top: 12px;
+    left: 12px;
+    max-width: min(260px, calc(100% - 24px));
+    padding: 10px 12px;
+  }
+
+  .emote-row {
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding: 0 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .emote-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .emote-row .chip {
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .menu-actions .ghost {
+    min-height: 40px;
+  }
+}
+
