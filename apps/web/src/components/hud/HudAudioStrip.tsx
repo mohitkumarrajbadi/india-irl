@@ -1,5 +1,6 @@
 "use client";
 
+import { Car, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useState } from "react";
 import { audioUi, setTrafficMuted, subscribeAudio, unlockAudio } from "@/game/audio";
 import { toast as pushToast } from "@/game/store";
@@ -29,6 +30,7 @@ export function HudAudioStrip() {
           pushToast(aud.trafficMuted ? "Traffic on" : "Traffic muted");
         }}
       >
+        <Car size={14} aria-hidden />
         Traffic
       </button>
       <button
@@ -42,6 +44,7 @@ export function HudAudioStrip() {
           pushToast(next ? "Speaker muted" : "Speaker on");
         }}
       >
+        {speakerOff ? <VolumeX size={14} aria-hidden /> : <Volume2 size={14} aria-hidden />}
         Speaker
       </button>
       <button
@@ -68,7 +71,8 @@ export function HudAudioStrip() {
           }
         }}
       >
-        {!voiceUi.on ? "Mic" : voiceUi.muted ? "Mic ·" : "Mic"}
+        {!voiceUi.on || voiceUi.muted ? <MicOff size={14} aria-hidden /> : <Mic size={14} aria-hidden />}
+        {!voiceUi.on ? "Mic" : voiceUi.muted ? "Mic" : "Mic"}
       </button>
       <FullscreenButton />
     </div>

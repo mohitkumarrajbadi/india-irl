@@ -1,5 +1,6 @@
 "use client";
 
+import { Bike, CarFront, LogOut } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { loadOnboard } from "@/game/onboarding";
 import { useGame } from "@/game/store";
@@ -17,6 +18,18 @@ import { HudMeter } from "./HudMeter";
 import { HudOnboard } from "./HudOnboard";
 import { MapPreview } from "./MapPreview";
 import { TouchControls } from "./TouchControls";
+
+function promptIcon(prompt: string) {
+  const t = prompt.toLowerCase();
+  if (t.includes("exit")) return <LogOut size={14} aria-hidden />;
+  if (t.includes("steal") || t.includes("scooter") || t.includes("bike")) {
+    return <Bike size={14} aria-hidden />;
+  }
+  if (t.includes("enter") || t.includes("vehicle") || t.includes("cab") || t.includes("auto")) {
+    return <CarFront size={14} aria-hidden />;
+  }
+  return <CarFront size={14} aria-hidden />;
+}
 
 export function Hud({ city }: { city: CityData }) {
   const hud = useGame((s) => s.hud);
@@ -80,6 +93,7 @@ export function Hud({ city }: { city: CityData }) {
 
       {hud.prompt ? (
         <div className="interact">
+          {promptIcon(hud.prompt)}
           <kbd>{hud.prompt.split("  ")[0]}</kbd> {hud.prompt.split("  ").slice(1).join(" ")}
         </div>
       ) : null}

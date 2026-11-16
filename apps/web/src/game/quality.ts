@@ -12,9 +12,9 @@ import {
 export type { QualityId, QualitySettings, QualityState } from "./quality-presets";
 export { QUALITY_PRESETS } from "./quality-presets";
 
-/** v2 — resets prior "High" lock that kept sessions at ~30fps. */
-const STORAGE = "india-irl:quality:v2";
-const LEGACY = "india-irl:quality:v1";
+/** v3 — low-end-first budgets after dense 12-type fleet. */
+const STORAGE = "india-irl:quality:v3";
+const LEGACY = "india-irl:quality:v2";
 
 /** Hysteresis so auto mode does not thrash every sample. */
 let lowStreak = 0;
@@ -40,7 +40,7 @@ export function detectDefaultPreference(): QualityId {
 export function resolveQuality(preference: QualityId, hint?: Exclude<QualityId, "auto">): QualitySettings {
   if (preference === "auto") {
     if (hint) return QUALITY_PRESETS[hint];
-    // Always start low — promote only after solid FPS samples
+    // Always boot low — promote after solid FPS so phones stay smooth
     return QUALITY_PRESETS.low;
   }
   return QUALITY_PRESETS[preference];
@@ -121,12 +121,12 @@ export function noteFps(fps: number): void {
       if (cur === "high") quality.active = QUALITY_PRESETS.medium;
       else if (cur === "medium") quality.active = QUALITY_PRESETS.low;
     }
-  } else if (fps >= 58) {
+  } else if (fps >= 55) {
     highStreak += 1;
     lowStreak = 0;
-    if (highStreak >= 5) {
+    if (highStreak >= 4) {
       highStreak = 0;
-      // Cap auto at medium — high (shadows/AA) is manual-only to avoid Canvas remount thrash
+      // Cap auto at medium — high is manual-only to avoid Canvas remount thrash
       if (cur === "low") quality.active = QUALITY_PRESETS.medium;
     }
   } else {

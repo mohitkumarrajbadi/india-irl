@@ -38,6 +38,7 @@ function stubAgent(partial: Partial<Agent>): Agent {
     spin: 0,
     taken: false,
     wrecked: false,
+    hasPillion: false,
     blinker: 0,
     turnBlinker: 0,
     braking: false,

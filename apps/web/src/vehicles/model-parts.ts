@@ -9,8 +9,10 @@ export type Model = {
 };
 
 export type BuildOpts = {
-  /** Bake a seated driver (and sometimes a pillion) into the mesh — for traffic only. */
+  /** Bake a seated driver into the mesh — for traffic only. */
   occupied?: boolean;
+  /** Bake a rear pillion on scooters/bikes (requires occupied). */
+  pillion?: boolean;
 };
 
 export const DARK = matte("#17191d", 0.78);

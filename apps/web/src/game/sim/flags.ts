@@ -48,12 +48,12 @@ export function isContentV2Enabled(): boolean {
   return readFeatureFlag("contentV2");
 }
 
-/** One continuous OMMO world + shared `ommo` relay room. */
+/** One continuous OMMO world + shared `ommo` relay room — always on. */
 export function isWorldV1Enabled(): boolean {
-  return readFeatureFlag("worldV1");
+  return true;
 }
 
-/** Expand all four metros + rural corridors (requires worldV1). */
+/** All four metros + rural corridors — always on with One World. */
 export function isWorldFullEnabled(): boolean {
-  return isWorldV1Enabled() && readFeatureFlag("worldFull");
+  return true;
 }

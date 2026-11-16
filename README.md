@@ -119,7 +119,9 @@ All sounds are synthesised in the browser (no audio assets). Footsteps while wal
 
 If the relay is not reachable the client falls back to `BroadcastChannel`, so two tabs of the same browser still see each other — **not** cross-device multiplayer. The HUD warns “This browser only” when that happens. To run against a deployed relay, set `NEXT_PUBLIC_RELAY_URL` (for example `wss://relay.example.com`) at build time.
 
-Friends deploy (Vercel + Fly): [`.env.example`](.env.example) · [`docs/DEPLOY-FRIENDS.md`](docs/DEPLOY-FRIENDS.md) · one-world plan: [`docs/OMMO-ONE-WORLD-AUDIT.md`](docs/OMMO-ONE-WORLD-AUDIT.md).
+**Production deploy** (Vercel frontend + Fly relay): see [`docs/DEPLOY-FRIENDS.md`](docs/DEPLOY-FRIENDS.md).  
+Env template: [`.env.example`](.env.example). Preflight: `npm run prod:check`.  
+One-world architecture: [`docs/OMMO-ONE-WORLD-AUDIT.md`](docs/OMMO-ONE-WORLD-AUDIT.md).
 
 ## Known limits
 

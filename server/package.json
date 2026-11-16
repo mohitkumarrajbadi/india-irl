@@ -1,0 +1,17 @@
+{
+  "name": "@india-irl/relay",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "OMMO WebSocket multiplayer relay",
+  "scripts": {
+    "start": "node relay.mjs",
+    "health": "node -e \"fetch('http://127.0.0.1:'+(process.env.PORT||8787)+'/health').then(r=>r.json()).then(console.log)\""
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "ws": "^8.22.2"
+  }
+}

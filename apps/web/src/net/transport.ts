@@ -20,8 +20,14 @@ export type Transport = {
 };
 
 export function relayUrl(): string {
-  const fromEnv = process.env.NEXT_PUBLIC_RELAY_URL;
+  const fromEnv = process.env.NEXT_PUBLIC_RELAY_URL?.trim();
   if (fromEnv) return fromEnv;
+  // Production HTTPS pages cannot reach a bare :8787 host — require env on deploy.
+  if (typeof location !== "undefined" && location.protocol === "https:") {
+    console.warn(
+      "[ommo] NEXT_PUBLIC_RELAY_URL missing on HTTPS — multiplayer will be this-browser-only.",
+    );
+  }
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   return `${proto}//${location.hostname}:8787`;
 }

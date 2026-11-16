@@ -4,7 +4,15 @@ import type { Rng } from "../lib/rng.ts";
 import { lineIndex } from "../world/generate.ts";
 import { isRuralAt } from "../world/terrain-sample.ts";
 import type { CityData, RoadLine } from "../world/types.ts";
-import { blinkerForTurn, DX, DZ, KIND_INFO, turnBetween, type Agent } from "./traffic-kinds.ts";
+import {
+  blinkerForTurn,
+  DX,
+  DZ,
+  isTwoWheeler,
+  KIND_INFO,
+  turnBetween,
+  type Agent,
+} from "./traffic-kinds.ts";
 import { spawnPlacementOk, spawnPlacementScore } from "./traffic-spawn.ts";
 
 export type NavCtx = {
@@ -58,6 +66,7 @@ export function placeAgent(ctx: NavCtx, a: Agent, i: number, j: number, dir: num
   a.spin = 0;
   a.taken = false;
   a.wrecked = false;
+  a.hasPillion = isTwoWheeler(a.kind) && rng() < 0.45;
   a.appearT = 0.45;
   a.exitLane = a.lane;
   resetSignals(a);
@@ -157,7 +166,7 @@ export function planAgent(ctx: NavCtx, a: Agent): void {
 }
 
 /**
- * Recycle an agent outside cull into a mid-far, preferably behind-camera road slot.
+ * Recycle an agent outside cull into a mid-range road slot (sides + ahead OK).
  * @param pyaw Player/camera yaw (atan2(sin, cos) travel convention).
  */
 export function respawnAgent(ctx: NavCtx, a: Agent, px: number, pz: number, pyaw = 0): void {

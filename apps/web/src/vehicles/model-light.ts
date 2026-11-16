@@ -67,7 +67,14 @@ export function buildBike(opts: BuildOpts = {}): Model {
   b.sphere(0.035, LENS_AMBER, { pos: [-0.14, 0.7, 0.58] }, 6);
   if (opts.occupied) {
     seated(b, 0, 0.82, -0.02, 3, { bike: true });
-    seated(b, 0, 0.84, -0.55, 8, { bike: true, lean: 0.02 });
+    if (opts.pillion) seated(b, 0, 0.84, -0.55, 8, { bike: true, lean: 0.02 });
   }
+  return { body: b.build(), glass: null };
+}
+
+/** Standalone pillion figure for instanced bike passengers. */
+export function buildBikePillion(): Model {
+  const b = new GeoBuilder();
+  seated(b, 0, 0.84, -0.55, 8, { bike: true, lean: 0.02 });
   return { body: b.build(), glass: null };
 }

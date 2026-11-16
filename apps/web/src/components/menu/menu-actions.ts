@@ -11,6 +11,7 @@ import type { CityId } from "@/world/types";
 export function enterGame(name: string, look: Look, cityId: CityId, vibe: VibeState): void {
   const clean = cleanName(name);
   if (!clean) return;
+  // Only write when the player opted to remember (or prior save already did).
   saveProfile(clean, look, cityId);
   noteSession(vibe);
   grantMission("enter");

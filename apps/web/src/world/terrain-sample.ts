@@ -71,6 +71,10 @@ export function regionAt(city: CityData, x: number, z: number): TerrainRegion {
   }
 
   const b = blockAt(city, x, z);
+  if (!b) {
+    // Between metros / corridor apron in the merged world
+    return "highway";
+  }
   if (b.fringe || b.kind === "park") {
     const edge =
       b.bi <= 1 || b.bj <= 1 || b.bi >= config.cols - 2 || b.bj >= config.rows - 2;
@@ -142,12 +146,8 @@ export function heightAt(city: CityData, x: number, z: number): number {
   // Soft fringe lift inside edge park cells
   let fringe = 0;
   if (pad < 1) {
-    try {
-      const b = blockAt(city, x, z);
-      if (b.fringe) fringe = 0.35 + noise2(x * 0.04, z * 0.04, config.seed) * 0.55;
-    } catch {
-      /* out of grid */
-    }
+    const b = blockAt(city, x, z);
+    if (b?.fringe) fringe = 0.35 + noise2(x * 0.04, z * 0.04, config.seed) * 0.55;
   }
 
   if (pad <= 0) return fringe;
@@ -165,55 +165,86 @@ export function heightAt(city: CityData, x: number, z: number): number {
 }
 
 /** Metres along span used for approach ramps (also mirrored at far end). */
-const FLYOVER_RAMP = 22;
+const FLYOVER_RAMP = 28;
 /** Stay on deck when yHint is at least this (below → drive under). */
 const FLYOVER_DECK_KEEP = 2.6;
 
-/**
- * Flyover surface height, or null for ground under the deck.
- * Mid-span is dual-level: ramps always rise; deck needs yHint (current player Y).
- */
-export function flyoverHeightAt(city: CityData, x: number, z: number, yHint?: number): number | null {
-  const fo = city.flyover;
-  if (!fo) return null;
+/** Smoothstep ease for ramp grades — soft entry/exit instead of linear snap. */
+function easeRamp(t: number): number {
+  const x = Math.max(0, Math.min(1, t));
+  return x * x * (3 - 2 * x);
+}
+
+function oneFlyoverHeight(
+  fo: CityData["flyovers"][number],
+  x: number,
+  z: number,
+  yHint?: number,
+): number | null {
   if (z < fo.z0 || z > fo.z1) return null;
   if (Math.abs(x - fo.x) > fo.half) return null;
 
   const deck = fo.deckY + 0.3;
   const span = fo.z1 - fo.z0;
-  const ramp = Math.min(FLYOVER_RAMP, span * 0.28);
+  const ramp = Math.min(FLYOVER_RAMP, span * 0.34);
   const along = z - fo.z0;
 
-  if (along < ramp) return (along / ramp) * deck;
-  if (along > span - ramp) return ((fo.z1 - z) / ramp) * deck;
+  if (along < ramp) return easeRamp(along / ramp) * deck;
+  if (along > span - ramp) return easeRamp((fo.z1 - z) / ramp) * deck;
 
   // Mid span — under at ground, on deck when already elevated (ramp / prior frame)
   if (yHint != null && yHint >= FLYOVER_DECK_KEEP) return deck;
   return null;
 }
 
-const UNDER_RAMP = 14;
+/**
+ * Flyover surface height, or null for ground under the deck.
+ * Mid-span is dual-level: ramps always rise; deck needs yHint (current player Y).
+ */
+export function flyoverHeightAt(city: CityData, x: number, z: number, yHint?: number): number | null {
+  for (const fo of city.flyovers) {
+    const y = oneFlyoverHeight(fo, x, z, yHint);
+    if (y != null) return y;
+  }
+  return null;
+}
 
-/** Road surface Y inside an underpass trough (negative mid-span), else null. */
-export function underpassHeightAt(city: CityData, x: number, z: number): number | null {
-  const u = city.underpass;
-  if (!u) return null;
+const UNDER_RAMP = 18;
+
+function oneUnderpassHeight(u: CityData["underpasses"][number], x: number, z: number): number | null {
   const span = u.a1 - u.a0;
-  const ramp = Math.min(UNDER_RAMP, span * 0.28);
+  const ramp = Math.min(UNDER_RAMP, span * 0.34);
   if (u.axis === "x") {
     if (Math.abs(z - u.c) > u.half) return null;
     if (x < u.a0 || x > u.a1) return null;
     const along = x - u.a0;
-    if (along < ramp) return (along / ramp) * u.floorY;
-    if (along > span - ramp) return ((u.a1 - x) / ramp) * u.floorY;
+    if (along < ramp) return easeRamp(along / ramp) * u.floorY;
+    if (along > span - ramp) return easeRamp((u.a1 - x) / ramp) * u.floorY;
     return u.floorY;
   }
   if (Math.abs(x - u.c) > u.half) return null;
   if (z < u.a0 || z > u.a1) return null;
   const along = z - u.a0;
-  if (along < ramp) return (along / ramp) * u.floorY;
-  if (along > span - ramp) return ((u.a1 - z) / ramp) * u.floorY;
+  if (along < ramp) return easeRamp(along / ramp) * u.floorY;
+  if (along > span - ramp) return easeRamp((u.a1 - z) / ramp) * u.floorY;
   return u.floorY;
+}
+
+/** Road surface Y inside an underpass trough (negative mid-span), else null. */
+export function underpassHeightAt(city: CityData, x: number, z: number): number | null {
+  for (const u of city.underpasses) {
+    const y = oneUnderpassHeight(u, x, z);
+    if (y != null) return y;
+  }
+  return null;
+}
+
+/** Active underpass under a point (for grade axis), or null. */
+export function underpassAt(city: CityData, x: number, z: number): CityData["underpasses"][number] | null {
+  for (const u of city.underpasses) {
+    if (oneUnderpassHeight(u, x, z) != null) return u;
+  }
+  return null;
 }
 
 function apronPad(city: CityData, x: number, z: number): number {
@@ -244,8 +275,8 @@ export function sampleTerrain(city: CityData, x: number, z: number, yHint?: numb
     const y1 = flyoverHeightAt(city, x, z + eps, yHint) ?? base;
     gradZ = (y1 - y0) / (eps * 2);
   } else if (underY != null) {
-    const u = city.underpass!;
-    if (u.axis === "x") {
+    const u = underpassAt(city, x, z);
+    if (u?.axis === "x") {
       const y0 = underpassHeightAt(city, x - eps, z) ?? base;
       const y1 = underpassHeightAt(city, x + eps, z) ?? base;
       gradX = (y1 - y0) / (eps * 2);

@@ -1,6 +1,7 @@
 "use client";
 
 /** Toggle browser fullscreen for streaming / OBS capture. */
+import { Maximize2, Minimize2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "@/game/store";
 
@@ -39,6 +40,7 @@ export function FullscreenButton() {
       title="Fullscreen (stream / OBS)"
       onClick={() => void toggle()}
     >
+      {on ? <Minimize2 size={14} aria-hidden /> : <Maximize2 size={14} aria-hidden />}
       {on ? "Exit FS" : "Fullscreen"}
     </button>
   );

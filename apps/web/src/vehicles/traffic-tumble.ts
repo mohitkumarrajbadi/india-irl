@@ -1,5 +1,13 @@
 /** Post-hit skid / tumble — bikes spin more, heavy vehicles slide. */
-import type { Agent } from "./traffic.ts";
+import type { EjectedBodyPool } from "./ejected-bodies.ts";
+import { isHeavyTraffic, isTwoWheeler, type Agent } from "./traffic-kinds.ts";
+
+/** Optional pool — set from Traffic mount so smash can throw pillions. */
+let ejectPool: EjectedBodyPool | null = null;
+
+export function setEjectedBodyPool(pool: EjectedBodyPool | null): void {
+  ejectPool = pool;
+}
 
 export function tickTrafficTumble(a: Agent, dt: number): boolean {
   if (a.ghost <= 0) return false;
@@ -11,7 +19,7 @@ export function tickTrafficTumble(a: Agent, dt: number): boolean {
   a.z += a.kbZ * dt;
   a.yaw += a.spin * dt;
   // Ground friction — bikes keep sliding a touch longer
-  const damp = a.kind === 1 ? 1.6 : a.kind >= 3 ? 3.2 : 2.4;
+  const damp = isTwoWheeler(a.kind) ? 1.6 : isHeavyTraffic(a.kind) ? 3.2 : 2.4;
   const f = Math.exp(-damp * dt);
   a.kbX *= f;
   a.kbZ *= f;
@@ -32,8 +40,8 @@ export function launchTrafficAgent(
   share: number,
   sev: number,
 ): void {
-  const bike = a.kind === 1;
-  const heavy = a.kind >= 3;
+  const bike = isTwoWheeler(a.kind);
+  const heavy = isHeavyTraffic(a.kind);
   const inv = 1 / (Math.hypot(nx, nz) || 1);
   const nxx = nx * inv;
   const nzz = nz * inv;
@@ -50,4 +58,27 @@ export function launchTrafficAgent(
   a.spin = (Math.random() - 0.5) * (3 + sev * 12) * spinMul;
   a.speed = 0;
   a.ghost = Math.max(a.ghost, (bike ? 1.3 : heavy ? 0.5 : 0.75) + sev * 1.4);
+
+  // Bike smash — throw driver + random pillion clear of the chassis
+  if (bike && ejectPool && impactSpeed > 3.2) {
+    ejectPool.spawn(a.x, a.z, a.yaw, nxx, nzz, sev, 0);
+    if (a.hasPillion) {
+      ejectPool.spawn(a.x, a.z, a.yaw, nxx, nzz, sev * 0.9, 0.55);
+      a.hasPillion = false;
+    }
+    // Leave chassis as a visible fallen wreck after tumble settles
+    a.wrecked = true;
+  }
+}
+
+/** Throw an NPC pillion clear (carjack / mid-drive steal). */
+export function ejectTrafficPillion(a: Agent): void {
+  if (!a.hasPillion || !ejectPool) {
+    a.hasPillion = false;
+    return;
+  }
+  const fx = Math.sin(a.yaw);
+  const fz = Math.cos(a.yaw);
+  ejectPool.spawn(a.x, a.z, a.yaw, fx, fz, 0.55, 0.55);
+  a.hasPillion = false;
 }

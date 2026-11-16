@@ -5,4 +5,9 @@ dist
 .DS_Store
 *.tsbuildinfo
 .vercel
-.env*.local
+.env
+.env.*
+!.env.example
+fly.toml.local
+.fly
+.env*

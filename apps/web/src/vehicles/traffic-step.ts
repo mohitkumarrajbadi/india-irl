@@ -23,6 +23,8 @@ export function stepAgent(
   const a = agents[n]!;
   if (a.taken) return;
   if (a.wrecked) {
+    // Finish skid/tumble, then freeze as a remountable fallen chassis
+    if (tickTrafficTumble(a, dt)) return;
     a.speed = 0;
     a.braking = false;
     if (a.appearT > 0) a.appearT = Math.max(0, a.appearT - dt);

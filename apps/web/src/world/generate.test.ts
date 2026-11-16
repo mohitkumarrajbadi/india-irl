@@ -43,9 +43,9 @@ for (const id of CITY_IDS) {
   assert.ok(city.trails.some((t) => t.kind === "village" && t.half <= 2.1), `${id}: village roads should be narrow`);
   // Outer walls must leave trail gates (more than 4 solid wall boxes)
   assert.ok(city.boxes.filter((b) => b.h === 0).length >= 4, `${id}: outer walls missing`);
-  assert.ok(city.flyover, `${id}: expected arterial flyover`);
-  assert.ok(city.underpass, `${id}: expected underpass`);
-  assert.ok(city.underpass!.floorY < -1, `${id}: underpass should dip below grade`);
+  assert.ok(city.flyovers.length >= 1, `${id}: expected arterial flyover`);
+  assert.ok(city.underpasses.length >= 1, `${id}: expected underpass`);
+  assert.ok(city.underpasses[0]!.floorY < -1, `${id}: underpass should dip below grade`);
   assert.ok(city.villages.length >= 1, `${id}: expected village settlement, got ${city.villages.length}`);
   console.log(
     `${id}: ${city.buildings.length} buildings, trails ${city.trails.length}, flyover yes, underpass yes, villages ${city.villages.length}, ${ms.toFixed(1)} ms`,

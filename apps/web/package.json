@@ -16,6 +16,7 @@
     "@india-irl/shared": "0.1.0",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
+    "lucide-react": "^0.511.0",
     "next": "^16.4.6",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

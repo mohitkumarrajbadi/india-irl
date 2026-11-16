@@ -1,16 +1,15 @@
 "use client";
 
-/** Character creator / lobby — thin shell wiring panes + actions. */
-import { useState, type CSSProperties } from "react";
+/** Lobby shell: brand + stage + look — no repeated chrome. */
+import { useEffect, useState, type CSSProperties } from "react";
 import { cleanName, lookKey, type Look } from "@/avatar/appearance";
-import { EMOTES } from "@/avatar/rig";
-import { levelInfo, noteLookTweak } from "@/game/vibe";
+import { silenceMenuAudio } from "@/game/audio";
+import { noteLookTweak } from "@/game/vibe";
 import { useGame } from "@/game/store";
-import { CITIES } from "@/world/cities";
-import { CITY_UI } from "@/world/cityUi";
 import { identityCaption } from "@/world/meets";
+import { CookieBanner } from "./CookieBanner";
 import { LookControls, type MenuTab } from "./LookControls";
-import { copyInviteLink, enterGame, openWhatsAppShare, startMeetPlan } from "./menu-actions";
+import { copyInviteLink, enterGame, openWhatsAppShare } from "./menu-actions";
 import { MenuSetup } from "./MenuSetup";
 import { PreviewCanvas } from "./PreviewCanvas";
 import { useMenuBootstrap } from "./useMenuBootstrap";
@@ -22,21 +21,17 @@ export default function Menu() {
   const meetId = useGame((s) => s.meetId);
   const setLook = useGame((s) => s.setLook);
   const [tab, setTab] = useState<MenuTab>("Body");
-  const [emote, setEmote] = useState(0);
   const [pulse, setPulse] = useState(0);
   const [copied, setCopied] = useState(false);
-  const { stats, vibe, setVibe, plan, setPlan, flash, setFlash, localTitle } = useMenuBootstrap();
+  const { stats, vibe, setVibe, plan, setFlash, localTitle } = useMenuBootstrap();
 
-  const city = CITIES[cityId];
-  const cityUi = CITY_UI[cityId];
-  const info = levelInfo(vibe.xp);
-  const cityStat = stats[cityId];
-  const meetStat = meetId && cityStat?.meets?.[meetId] ? cityStat.meets[meetId] : null;
-  const here = meetStat ? meetStat.n : cityStat?.online ?? 0;
-  const talking = meetStat ? meetStat.talking : cityStat?.talking ?? 0;
-  const place = meetId ? city.meets.find((m) => m.id === meetId)?.label ?? city.name : city.name;
+  useEffect(() => {
+    silenceMenuAudio();
+  }, []);
+
   const ready = cleanName(name).length > 0;
   const caption = identityCaption(lookKey(look));
+  const displayName = cleanName(name) || localTitle || "You";
 
   const tweak = (patch: Partial<Look>) => {
     setLook(patch);
@@ -47,25 +42,20 @@ export default function Menu() {
   return (
     <main
       className="menu"
-      data-city={cityId}
+      data-city="ommo"
       style={
         {
-          "--city-accent": cityUi.accent,
-          "--city-soft": cityUi.accentSoft,
-          "--city-art": cityUi.art,
+          "--city-accent": "#ff7a45",
+          "--city-soft": "rgba(255, 122, 69, 0.16)",
+          "--city-art": "linear-gradient(145deg, #0a2a28, #5ef0c8 55%, #ff7a45)",
         } as CSSProperties
       }
     >
       <MenuSetup
         name={name}
-        cityId={cityId}
-        meetId={meetId}
         stats={stats}
-        vibe={vibe}
         plan={plan}
-        localTitle={localTitle}
         ready={ready}
-        place={place}
         copied={copied}
         onEnter={() => enterGame(name, look, cityId, vibe)}
         onCopy={() => {
@@ -76,24 +66,24 @@ export default function Menu() {
             }
           });
         }}
-        onWhatsApp={() => openWhatsAppShare({ cityId, meetId, place, here, talking })}
-        onPlan={() => void startMeetPlan({ cityId, meetId, name, onPlan: setPlan, onFlash: setFlash })}
+        onWhatsApp={() =>
+          openWhatsAppShare({
+            cityId,
+            meetId,
+            place: "OMMO",
+            here: stats.ommo?.online ?? 0,
+            talking: stats.ommo?.talking ?? 0,
+          })
+        }
       />
 
       <section className="menu-stage">
         <div className="stage-wash" aria-hidden />
-        <PreviewCanvas look={look} emote={emote} pulse={pulse} cityId={cityId} />
+        <PreviewCanvas look={look} emote={0} pulse={pulse} cityId={cityId} />
         <div className="stage-badge">
-          <span>Your look · OMMO</span>
-          <strong>{localTitle || info.title}</strong>
+          <span>Your look</span>
+          <strong>{displayName}</strong>
           <em className="identity-caption">{caption}</em>
-        </div>
-        <div className="emote-row">
-          {EMOTES.map((e) => (
-            <button key={e.id} className={emote === e.id ? "chip on" : "chip"} onClick={() => setEmote(e.id)}>
-              {e.id === 0 ? "Idle" : e.name}
-            </button>
-          ))}
         </div>
       </section>
 
@@ -105,11 +95,11 @@ export default function Menu() {
         onSurprise={() => {
           setPulse((p) => p + 1);
           setVibe(noteLookTweak());
-          setFlash("Random drip — keep or tweak");
+          setFlash("New look — keep or tweak");
         }}
       />
 
-      {flash ? <div className="menu-flash">{flash}</div> : null}
+      <CookieBanner />
     </main>
   );
 }

@@ -27,22 +27,23 @@ function teardown(): void {
 
 /** intensity 0…1 — builds a soft high-frequency rain hiss. */
 export function setRainAmbience(intensity: number): void {
-  const ac = getContext();
-  const dest = ambientOut();
-  if (!ac || !dest) return;
   const muted = isTrafficMuted() || isSpeakerMuted();
   const want = muted ? 0 : Math.max(0, Math.min(1, intensity));
 
   if (want < 0.04) {
-    if (rainGain) {
-      rainGain.gain.setTargetAtTime(0.0001, ac.currentTime, 0.4);
-      if (want <= 0) {
-        // keep graph warm briefly
-      }
+    if (!rainGain) {
+      level = want;
+      return;
     }
+    const ac = getContext();
+    if (ac) rainGain.gain.setTargetAtTime(0.0001, ac.currentTime, 0.4);
     level = want;
     return;
   }
+
+  const ac = getContext();
+  const dest = ambientOut();
+  if (!ac || !dest) return;
 
   if (!rainGain) {
     rainGain = ac.createGain();

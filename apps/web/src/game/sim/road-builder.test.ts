@@ -21,7 +21,7 @@ assert(Math.abs(mesh.verts[1]! - ROAD_SURFACE_Y) < 1.2, "spawn road Y near surfa
 const empty = buildRoadChunk(city, 999, 999);
 assert(empty.verts.length === 0, "far cell has no roads");
 
-const fo = city.flyover;
+const fo = city.flyovers[0];
 assert(fo, "flyover expected");
 const fcx = Math.floor(fo!.x / CHUNK_SIZE);
 const fcz = Math.floor(((fo!.z0 + fo!.z1) * 0.5) / CHUNK_SIZE);

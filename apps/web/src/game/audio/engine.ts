@@ -35,6 +35,8 @@ function stopEngine(): void {
 }
 
 export function setEngine(next: number, speed: number): void {
+  // Avoid spinning up AudioContext just to stop a silent engine (menu mount).
+  if (next === 0 && kind < 0) return;
   const ac = getContext();
   const dest = engineOut();
   if (!ac || !dest) return;

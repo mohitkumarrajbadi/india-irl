@@ -24,28 +24,28 @@
 }
 
 .chat li b {
-  color: var(--teal);
+  color: var(--neon);
   margin-right: 4px;
 }
 
 .chat li.mine b {
-  color: var(--marigold);
+  color: var(--signal);
 }
 
 .chat-hint {
   margin: 0;
   font-size: 11px;
-  color: rgba(243, 239, 228, 0.48);
+  color: var(--mist-mute);
 }
 
 .chat-form input {
   pointer-events: auto;
   width: 100%;
   padding: 9px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(231, 197, 106, 0.45);
+  border-radius: 12px;
+  border: 1px solid rgba(94, 240, 200, 0.35);
   background: var(--glass-strong);
-  color: var(--cream);
+  color: var(--mist);
   font: inherit;
   outline: none;
   user-select: text;
@@ -73,7 +73,7 @@
   background: none;
   border: 0;
   padding: 0;
-  color: var(--marigold);
+  color: var(--neon);
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;

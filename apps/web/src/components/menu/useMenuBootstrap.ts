@@ -1,7 +1,7 @@
 /** Menu boot: profile, deep links, stats poll, plan poll, flash TTL. */
 import { useEffect, useState } from "react";
 import { applyEndowment, loadOnboard } from "@/game/onboarding";
-import { loadProfile, useGame } from "@/game/store";
+import { loadProfile, setRememberProfile, useGame } from "@/game/store";
 import { loadLastPlanId, saveLastPlanId } from "@/net/plans-persist";
 import { fetchPlan, fetchStats, type PlanInfo, type StatsMap } from "@/net/stats";
 import { loadVibe, touchStreak, type VibeState } from "@/game/vibe";
@@ -17,7 +17,10 @@ export function useMenuBootstrap() {
 
   useEffect(() => {
     const saved = loadProfile();
-    if (saved) useGame.setState({ name: saved.name, look: saved.look, cityId: saved.city });
+    if (saved) {
+      setRememberProfile(true);
+      useGame.setState({ name: saved.name, look: saved.look, cityId: saved.city });
+    }
     try {
       const deep = parseDeepLink(window.location.search);
       const patch: {
@@ -61,8 +64,7 @@ export function useMenuBootstrap() {
     useGame.setState({ vibe: endowed?.vibe ?? award.state });
     setLocalTitleUi(loadOnboard().localTitle);
     if (award.streakUp && award.state.streak > 1) setFlash(`${award.state.streak}-day streak · keep it alive`);
-    else if (endowed && endowed.gained > 0) setFlash(`Level bar primed · +${endowed.gained} vibe`);
-    else if (award.gained > 0) setFlash(`Welcome back · +${award.gained} vibe`);
+    else if (award.gained > 0) setFlash(`Welcome back`);
   }, []);
 
   useEffect(() => {

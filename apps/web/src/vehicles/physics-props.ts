@@ -81,7 +81,7 @@ export const PLAYER_PHYSICS: Record<1 | 2 | 3, PhysicsProps> = {
   },
 };
 
-/** NPC traffic: 0 auto, 1 bike, 2 car, 3 bus, 4 truck. */
+/** NPC traffic — mirrors KIND_INFO fleet (12 types). */
 export const TRAFFIC_PHYSICS: Record<TrafficKind, PhysicsProps> = {
   0: { ...PLAYER_PHYSICS[1] },
   1: { ...PLAYER_PHYSICS[2] },
@@ -117,5 +117,64 @@ export const TRAFFIC_PHYSICS: Record<TrafficKind, PhysicsProps> = {
     rigidity: 0.88,
     yawInertia: 2.8,
     separableRider: false,
+  },
+  5: {
+    ...PLAYER_PHYSICS[2],
+    mass: 160,
+    length: 2.05,
+    maxSpeed: 24,
+    accelForce: 9.2,
+    separableRider: true,
+  },
+  6: {
+    ...PLAYER_PHYSICS[3],
+    mass: 1650,
+    length: 4.6,
+    width: 1.9,
+    height: 1.75,
+    maxSpeed: 24,
+    durability: 170,
+  },
+  7: {
+    mass: 2200,
+    length: 4.8,
+    width: 1.85,
+    height: 2.1,
+    comY: 0.7,
+    suspension: 1.15,
+    grip: 0.9,
+    accelForce: 3.4,
+    brakeForce: 11,
+    maxSpeed: 14,
+    durability: 200,
+    rigidity: 0.8,
+    yawInertia: 1.6,
+    separableRider: false,
+  },
+  8: {
+    ...PLAYER_PHYSICS[3],
+    mass: 1800,
+    length: 4.9,
+    width: 1.95,
+    height: 2.0,
+    maxSpeed: 22,
+    durability: 160,
+  },
+  9: {
+    ...PLAYER_PHYSICS[3],
+    mass: 1400,
+    length: 4.0,
+    width: 1.8,
+    height: 1.7,
+    maxSpeed: 23,
+    durability: 150,
+  },
+  10: { ...PLAYER_PHYSICS[3], maxSpeed: 26, durability: 145 },
+  11: {
+    ...PLAYER_PHYSICS[1],
+    mass: 380,
+    length: 2.7,
+    maxSpeed: 12,
+    accelForce: 4.2,
   },
 };

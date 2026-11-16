@@ -1,6 +1,7 @@
 /** Vehicle mass classes for smash outcomes — sourced from physics-props. */
 import type { TrafficKind } from "./traffic";
 import { PLAYER_PHYSICS, TRAFFIC_PHYSICS } from "./physics-props.ts";
+import { TRAFFIC_KIND_COUNT } from "./traffic-kinds.ts";
 
 /** Player drive kinds: 1 auto, 2 bike, 3 cab. */
 export const PLAYER_MASS: Record<1 | 2 | 3, number> = {
@@ -9,14 +10,10 @@ export const PLAYER_MASS: Record<1 | 2 | 3, number> = {
   3: PLAYER_PHYSICS[3].mass,
 };
 
-/** NPC traffic: 0 auto, 1 bike, 2 car, 3 bus, 4 truck. */
-export const TRAFFIC_MASS: Record<TrafficKind, number> = {
-  0: TRAFFIC_PHYSICS[0].mass,
-  1: TRAFFIC_PHYSICS[1].mass,
-  2: TRAFFIC_PHYSICS[2].mass,
-  3: TRAFFIC_PHYSICS[3].mass,
-  4: TRAFFIC_PHYSICS[4].mass,
-};
+/** NPC traffic mass table — one entry per TrafficKind. */
+export const TRAFFIC_MASS: Record<TrafficKind, number> = Object.fromEntries(
+  Array.from({ length: TRAFFIC_KIND_COUNT }, (_, k) => [k, TRAFFIC_PHYSICS[k as TrafficKind].mass]),
+) as Record<TrafficKind, number>;
 
 export const WORLD_MASS = 50_000;
 

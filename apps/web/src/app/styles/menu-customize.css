@@ -4,36 +4,37 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
   padding: 4px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.05);
+  border-radius: 999px;
+  background: rgba(231, 242, 239, 0.05);
+  border: 1px solid var(--line);
 }
 
 .tab {
   min-height: 40px;
   padding: 8px 6px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 999px;
   background: transparent;
-  color: rgba(243, 239, 228, 0.62);
-  font-size: 13px;
+  color: var(--mist-mute);
+  font-size: 12.5px;
   font-weight: 600;
   letter-spacing: -0.01em;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .tab.on {
-  background: rgba(255, 255, 255, 0.92);
-  color: #10140f;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+  background: var(--mist);
+  color: #061012;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
 }
 
 .group {
   display: grid;
   gap: 12px;
   align-content: start;
-  padding: 14px;
-  border-radius: var(--radius-m);
-  border: 1px solid rgba(243, 239, 228, 0.1);
-  background: rgba(255, 255, 255, 0.03);
+  padding: 4px 2px 8px;
+  border: 0;
+  background: transparent;
 }
 
 .chips,
@@ -47,22 +48,22 @@
   min-height: 36px;
   padding: 8px 14px;
   border-radius: 999px;
-  border: 1px solid rgba(243, 239, 228, 0.12);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(231, 242, 239, 0.12);
+  background: rgba(231, 242, 239, 0.04);
   font-size: 13px;
   letter-spacing: -0.01em;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .chip:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(243, 239, 228, 0.22);
+  background: rgba(231, 242, 239, 0.08);
+  border-color: rgba(231, 242, 239, 0.22);
 }
 
 .chip.on {
-  border-color: color-mix(in srgb, var(--city-accent) 55%, transparent);
-  background: var(--city-soft);
-  color: var(--city-accent);
+  border-color: rgba(94, 240, 200, 0.45);
+  background: var(--neon-soft);
+  color: var(--neon);
   font-weight: 650;
 }
 
@@ -70,14 +71,14 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  border: 2px solid rgba(243, 239, 228, 0.18);
+  border: 2px solid rgba(231, 242, 239, 0.18);
   padding: 0;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .sw.on {
   border-color: #fff;
-  box-shadow: 0 0 0 2px var(--city-accent);
+  box-shadow: 0 0 0 2px var(--signal);
   transform: scale(1.08);
 }
 
@@ -90,16 +91,18 @@
 
 .ghost {
   min-height: 44px;
-  padding: 10px 12px;
-  border-radius: var(--radius-s);
-  border: 1px solid rgba(243, 239, 228, 0.12);
-  background: rgba(255, 255, 255, 0.04);
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(231, 242, 239, 0.12);
+  background: rgba(231, 242, 239, 0.04);
   font-size: 13px;
   font-weight: 600;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .ghost:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(231, 242, 239, 0.09);
+  border-color: rgba(231, 242, 239, 0.22);
 }
 
 .menu-flash {
@@ -108,13 +111,13 @@
   bottom: 28px;
   transform: translateX(-50%);
   z-index: 40;
-  padding: 12px 18px;
-  border-radius: 14px;
-  border: 1px solid rgba(231, 197, 106, 0.4);
-  background: rgba(18, 24, 16, 0.92);
-  color: var(--marigold);
+  padding: 12px 20px;
+  border-radius: 999px;
+  border: 1px solid rgba(94, 240, 200, 0.35);
+  background: rgba(6, 12, 14, 0.92);
+  color: var(--neon);
   font-weight: 650;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
   pointer-events: none;
+  backdrop-filter: blur(12px);
 }
-

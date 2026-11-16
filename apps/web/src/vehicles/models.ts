@@ -4,5 +4,14 @@
  */
 export type { BuildOpts, Model } from "./model-parts";
 export { glassMaterial } from "./model-parts";
-export { buildAuto, buildBike } from "./model-light";
+export { buildAuto, buildBike, buildBikePillion } from "./model-light";
 export { buildBus, buildCar, buildTruck } from "./model-heavy";
+export {
+  buildERickshaw,
+  buildJeep,
+  buildMotorcycle,
+  buildSuv,
+  buildTaxi,
+  buildTempo,
+  buildVan,
+} from "./model-extra";

@@ -533,4 +533,7 @@ function shutdown(signal) {
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
 
-http.listen(PORT, () => log("info", "listening", { port: PORT, origins: ALLOWED_ORIGINS.length || "any" }));
+const HOST = process.env.HOST || "0.0.0.0";
+http.listen(PORT, HOST, () =>
+  log("info", "listening", { host: HOST, port: PORT, origins: ALLOWED_ORIGINS.length || "any" }),
+);

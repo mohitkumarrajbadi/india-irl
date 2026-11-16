@@ -1,13 +1,21 @@
 /** Unified nearest enterable vehicle: world parked + ambient traffic. */
-import { KIND_INFO, type Agent, type TrafficKind } from "../vehicles/traffic-kinds.ts";
+import { trafficDrive } from "../vehicles/drive-catalog.ts";
+import {
+  KIND_INFO,
+  TRAFFIC_NAMES,
+  type Agent,
+  type TrafficKind,
+} from "../vehicles/traffic-kinds.ts";
 import type { CityData } from "../world/types.ts";
 import { findNearestWorldParked, type WorldParkedHit } from "./world-vehicles.ts";
 
-/** Traffic 0 auto→1, 1 bike→2, 2 car→3; bus/truck drive as cab for now. */
+/** Map traffic mesh → player drive archetype (auto / bike / car-family). */
 export function trafficKindToVehicle(kind: TrafficKind): 1 | 2 | 3 {
-  if (kind === 0) return 1;
-  if (kind === 1) return 2;
-  return 3;
+  return trafficDrive(kind).archetype;
+}
+
+export function trafficKindLabel(kind: TrafficKind): string {
+  return TRAFFIC_NAMES[kind] ?? "Vehicle";
 }
 
 export type EnterableHit =

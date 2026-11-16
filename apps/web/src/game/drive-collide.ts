@@ -5,6 +5,7 @@ import { obbOverlap, obbPushOut, type Obb } from "../lib/obb";
 import { selfPushShare } from "../vehicles/mass";
 import { PLAYER_PHYSICS, TRAFFIC_PHYSICS } from "../vehicles/physics-props";
 import { KIND_INFO, type Agent } from "../vehicles/traffic";
+import { isTwoWheeler } from "../vehicles/traffic-kinds";
 import { launchTrafficAgent } from "../vehicles/traffic-tumble";
 import type { VehicleSpec } from "../vehicles/specs";
 
@@ -25,8 +26,8 @@ export type DriveCollideHit = {
 
 function agentObb(a: Agent): Obb {
   const info = KIND_INFO[a.kind];
-  const padL = a.kind === 1 ? 1.25 : 1.06;
-  const padW = a.kind === 1 ? 1.9 : 1.1;
+  const padL = isTwoWheeler(a.kind) ? 1.25 : 1.06;
+  const padW = isTwoWheeler(a.kind) ? 1.9 : 1.1;
   return {
     x: a.x,
     z: a.z,
@@ -111,7 +112,7 @@ export function collidePlayerTraffic(
         share,
         Math.max(outcome.otherSev, outcome.selfSev * 0.5),
       );
-      if (a.kind === 1 && closing > 3) flungBike = true;
+      if (isTwoWheeler(a.kind) && closing > 3) flungBike = true;
     }
 
     if (outcome.selfSev <= 0.02) continue;
@@ -121,7 +122,7 @@ export function collidePlayerTraffic(
         nx: push.nx,
         nz: push.nz,
         speedBefore: speed,
-        flungBike: a.kind === 1,
+        flungBike: isTwoWheeler(a.kind),
         glance: outcome.glance,
         speedAfter: outcome.selfSpeed,
         yawKick: outcome.selfYawKick,

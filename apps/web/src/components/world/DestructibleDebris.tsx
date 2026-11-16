@@ -52,9 +52,12 @@ export function DestructibleDebris({ sim }: { sim: DestructibleSim }) {
       } else {
         alive += 1;
         const fade = 1 - d.life / d.maxLife;
+        const s = d.scale * (0.55 + fade * 0.45);
         dummy.position.set(d.x, d.y, d.z);
         dummy.rotation.set(d.spin, d.spin * 0.7, d.spin * 0.4);
-        dummy.scale.setScalar(d.scale * (0.55 + fade * 0.45));
+        // Knocked poles read as long tumbling shafts, not cubes
+        if (d.tall) dummy.scale.set(s * 0.22, s * 3.4, s * 0.22);
+        else dummy.scale.setScalar(s);
         color.set(COLORS[d.material] ?? "#888");
         mesh.setColorAt(i, color);
       }

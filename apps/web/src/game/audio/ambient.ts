@@ -30,6 +30,12 @@ function stopBed(): void {
   bedGain?.disconnect();
   bedGain = null;
   kind = "";
+  distantAcc = 0;
+}
+
+/** Tear down city bed — call when leaving play for the lobby. */
+export function stopAmbient(): void {
+  stopBed();
 }
 
 export function setAmbient(next: string, volume = 1): void {

@@ -1,10 +1,22 @@
 "use client";
 
+import { Hand, Music2, Sparkles } from "lucide-react";
 import { EMOTES } from "@/avatar/rig";
 import { pulseAction } from "@/game/input";
 import { useGame } from "@/game/store";
 
 const SLOTS = EMOTES.filter((e) => e.id > 0);
+
+function emoteIcon(name: string) {
+  const n = name.toLowerCase();
+  if (n.includes("wave") || n.includes("namaste") || n.includes("sit")) {
+    return <Hand size={14} aria-hidden />;
+  }
+  if (n.includes("bhangra") || n.includes("garba") || n.includes("bollywood") || n.includes("groove")) {
+    return <Music2 size={14} aria-hidden />;
+  }
+  return <Sparkles size={14} aria-hidden />;
+}
 
 const KEY_CODE: Record<string, string> = {
   Z: "KeyZ",
@@ -45,6 +57,7 @@ export function EmoteWheel() {
               }}
             >
               <span className="emote-slot-key">{i + 1}</span>
+              {emoteIcon(e.name)}
               {e.name}
             </button>
           );

@@ -1,12 +1,12 @@
-/* ---------- Menu / character creator (Apple-like system) ---------- */
+/* ---------- Menu lobby — brand-first composition ---------- */
 
 .menu {
-  --city-accent: #e7c56a;
-  --city-soft: rgba(231, 197, 106, 0.16);
-  --city-art: linear-gradient(145deg, #2f6b3a, #e7c56a);
-  --menu-gap: 16px;
-  --menu-pad: 20px;
-  --radius-l: 28px;
+  --city-accent: var(--signal);
+  --city-soft: var(--signal-soft);
+  --city-art: linear-gradient(145deg, #0a2a28, #ff7a45);
+  --menu-gap: 18px;
+  --menu-pad: 22px;
+  --radius-l: 32px;
   --radius-m: 18px;
   --radius-s: 12px;
   box-sizing: border-box;
@@ -14,7 +14,7 @@
   height: 100dvh;
   max-height: 100dvh;
   display: grid;
-  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr) minmax(280px, 320px);
+  grid-template-columns: minmax(300px, 340px) minmax(0, 1fr) minmax(270px, 300px);
   grid-template-rows: minmax(0, 1fr);
   gap: var(--menu-gap);
   padding: max(var(--menu-pad), env(safe-area-inset-top))
@@ -24,10 +24,27 @@
   overflow: hidden;
   user-select: none;
   background:
-    radial-gradient(980px 560px at 8% -8%, var(--city-soft), transparent 58%),
-    radial-gradient(720px 460px at 96% 108%, color-mix(in srgb, var(--city-accent) 16%, transparent), transparent 55%),
-    linear-gradient(165deg, #080b09 0%, #0c110e 52%, #090e0b 100%);
+    radial-gradient(900px 520px at 12% -10%, rgba(94, 240, 200, 0.14), transparent 55%),
+    radial-gradient(760px 480px at 92% 110%, rgba(255, 122, 69, 0.16), transparent 52%),
+    radial-gradient(500px 300px at 55% 40%, rgba(255, 255, 255, 0.03), transparent 70%),
+    linear-gradient(168deg, #040708 0%, #0a1216 48%, #071014 100%);
   transition: background 0.45s ease;
+}
+
+.menu::before {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E");
+  mix-blend-mode: soft-light;
+}
+
+.menu > * {
+  position: relative;
+  z-index: 1;
 }
 
 .menu-left,
@@ -36,7 +53,7 @@
   flex-direction: column;
   min-height: 0;
   height: 100%;
-  gap: 12px;
+  gap: 14px;
   overflow: hidden;
 }
 
@@ -47,63 +64,52 @@
   overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
   padding-right: 2px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(243, 239, 228, 0.18) transparent;
+  scrollbar-color: rgba(231, 242, 239, 0.16) transparent;
 }
 
 .menu-pane::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 .menu-pane::-webkit-scrollbar-thumb {
-  background: rgba(243, 239, 228, 0.18);
+  background: rgba(231, 242, 239, 0.16);
   border-radius: 999px;
 }
 
 .menu-hero {
   display: grid;
-  gap: 8px;
+  gap: 10px;
+  animation: menu-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes menu-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .brand-hero {
   margin: 0;
   font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
-  font-size: clamp(44px, 4.6vw, 62px);
-  font-weight: 780;
-  letter-spacing: 0.04em;
-  line-height: 0.96;
-  color: var(--cream);
-}
-
-.menu-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.menu-nav-btn {
-  border: 1px solid rgba(243, 239, 228, 0.12);
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(243, 239, 228, 0.72);
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-}
-
-.menu-nav-btn.on {
-  border-color: color-mix(in srgb, var(--city-accent) 55%, transparent);
-  background: var(--city-soft);
-  color: var(--cream);
+  font-size: clamp(56px, 7vw, 84px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 0.88;
+  color: var(--mist);
+  text-shadow: 0 0 60px rgba(94, 240, 200, 0.18);
 }
 
 .brand-hero em {
   font-style: normal;
-  background: linear-gradient(120deg, var(--city-accent), #f2c230 72%);
+  background: linear-gradient(115deg, var(--neon) 10%, var(--mist) 45%, var(--signal) 95%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -111,51 +117,67 @@
 
 .city-line {
   margin: 0;
-  font-size: 17px;
-  letter-spacing: -0.02em;
-  color: rgba(243, 239, 228, 0.72);
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(18px, 2vw, 22px);
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  color: var(--mist);
 }
 
 .city-line strong {
-  color: var(--cream);
-  font-weight: 650;
+  color: var(--neon);
+  font-weight: 700;
 }
 
 .hook-line {
   margin: 0;
-  max-width: 32ch;
-  font-size: 14px;
+  max-width: 28ch;
+  font-size: 14.5px;
   line-height: 1.45;
-  color: rgba(243, 239, 228, 0.62);
+  color: var(--mist-dim);
 }
 
 .live-pill {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin: 2px 0 0;
+  margin: 4px 0 0;
   width: fit-content;
-  min-height: 32px;
-  padding: 6px 12px;
+  min-height: 30px;
+  padding: 5px 12px 5px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(111, 227, 154, 0.28);
-  background: rgba(111, 227, 154, 0.1);
-  color: #8ef0b0;
+  border: 1px solid rgba(111, 232, 176, 0.22);
+  background: rgba(111, 232, 176, 0.08);
+  color: #a8f5d0;
   font-size: 12px;
   font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .live-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #6fe39a;
-  animation: live-pulse 1.6s ease-out infinite;
+  background: var(--live);
+  animation: live-pulse 1.8s ease-out infinite;
 }
 
 @keyframes live-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(111, 227, 154, 0.55); }
-  70% { box-shadow: 0 0 0 8px rgba(111, 227, 154, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(111, 227, 154, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(111, 232, 176, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 9px rgba(111, 232, 176, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(111, 232, 176, 0);
+  }
 }
 
+.dest-hint {
+  margin: 0;
+  max-width: 34ch;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--mist-mute);
+}

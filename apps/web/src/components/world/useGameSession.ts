@@ -10,20 +10,19 @@ import {
 } from "@/game/onboarding";
 import { live } from "@/game/runtime";
 import { disposeDriveSession, ensureDriveWorker } from "@/game/sim/drive-session";
-import { isRapierDriveEnabled, isWorldV1Enabled } from "@/game/sim/flags";
+import { isRapierDriveEnabled } from "@/game/sim/flags";
 import { toast, useGame } from "@/game/store";
 import { connect, disconnect, useNet } from "@/net/store";
 import { localTitleFor } from "@/world/meets";
 import type { CityData } from "@/world/types";
 import type { Look } from "@/avatar/appearance";
 
-/** Net connect, onboard script, join-by-friend. */
+/** Net connect, onboard script, join-by-friend — always shared `ommo` room. */
 export function useGameSession(city: CityData, name: string, look: Look): void {
   const cityId = useGame((s) => s.cityId);
   const meetId = useGame((s) => s.meetId);
   const joinId = useGame((s) => s.joinId);
-  const worldV1 = isWorldV1Enabled();
-  const roomId = worldV1 ? "ommo" : cityId;
+  const roomId = "ommo";
 
   useEffect(() => {
     connect(roomId, name, look);
@@ -34,7 +33,7 @@ export function useGameSession(city: CityData, name: string, look: Look): void {
       disconnect();
       disposeDriveSession();
     };
-    // World mode: stay in one room across destination/city alias changes.
+    // Shared world room — stay connected across destination/spawn changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, name]);
 
@@ -54,7 +53,7 @@ export function useGameSession(city: CityData, name: string, look: Look): void {
     });
     toast(`Welcome · you’re ${loadOnboard().localTitle || title}`);
     const t1 = setTimeout(() => {
-      toast("Walk up to a parked vehicle · press F to drive");
+      toast("Walk up to any parked or moving vehicle · press F");
       advanceStep("first_ride");
     }, 2800);
     return () => clearTimeout(t1);

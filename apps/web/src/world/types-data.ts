@@ -135,10 +135,10 @@ export type CityData = {
   circles: Circle[];
   /** Village dirt tracks + hill switchbacks draped on the apron. */
   trails: TrailRoad[];
-  /** Optional elevated arterial; null if city has no suitable span. */
-  flyover: Flyover | null;
-  /** Optional dipped underpass; null if no suitable crossing. */
-  underpass: Underpass | null;
+  /** Elevated arterials (one per metro when merged into OMMO world). */
+  flyovers: Flyover[];
+  /** Dipped underpasses (one per metro when merged into OMMO world). */
+  underpasses: Underpass[];
   /** Rural hamlets along village trails. */
   villages: VillageSettlement[];
   bounds: Rect;

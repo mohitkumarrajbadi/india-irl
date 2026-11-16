@@ -4,21 +4,20 @@ import {
   apartmentList,
   apartmentPending,
 } from "@/game/apartment";
-import { findNearestEnterable, trafficKindToVehicle } from "@/game/enterable-vehicles";
+import { findNearestEnterable, trafficKindLabel } from "@/game/enterable-vehicles";
 import { runtime } from "@/game/runtime";
 import { isSocialV2Enabled } from "@/game/sim/flags";
 import { hangoutPrompt } from "@/game/social/hangout";
 import type { Peer } from "@/net/store";
 import { SPECS } from "@/vehicles/specs";
+import type { TrafficKind } from "@/vehicles/traffic-kinds";
 import { nearestApartment } from "@/world/apartments";
 import type { CityData } from "@/world/types";
 import { findNearestRide } from "./find-nearest-ride.ts";
 import type { PlayerState } from "./types.ts";
 
 function trafficLabel(kind: number): string {
-  if (kind === 3) return "Bus";
-  if (kind === 4) return "Truck";
-  return SPECS[trafficKindToVehicle(kind as 0 | 1 | 2 | 3 | 4)].name;
+  return trafficKindLabel(kind as TrafficKind);
 }
 
 export function contextualPrompt(
@@ -43,20 +42,23 @@ export function contextualPrompt(
   if (s.parked && performance.now() < s.parked.until) {
     remD = (s.parked.x - s.x) ** 2 + (s.parked.z - s.z) ** 2;
   }
+  const enterLabel = (h: NonNullable<typeof hit>): string => {
+    const name = h.source === "traffic" ? trafficLabel(h.trafficKind) : SPECS[h.kind].name;
+    if (h.source === "traffic") {
+      const agent = runtime.traffic?.agents[h.index];
+      if (agent && (Math.abs(agent.speed) > 2.5 || agent.hasPillion)) {
+        return `F  Steal · ${name}`;
+      }
+    }
+    return `F  Enter · ${name}`;
+  };
+
   // Match vehicleAction: nearby world vehicle beats a farther stash remount.
-  if (hit && hitD <= remD) {
-    const name =
-      hit.source === "traffic" ? trafficLabel(hit.trafficKind) : SPECS[hit.kind].name;
-    return `F  Enter Vehicle · ${name}`;
-  }
+  if (hit && hitD <= remD) return enterLabel(hit);
   if (s.parked && remD < 18 * 18) {
-    return `F  Enter Vehicle · ${SPECS[s.parked.kind].name}`;
+    return `F  Enter · ${SPECS[s.parked.kind].name}`;
   }
-  if (hit) {
-    const name =
-      hit.source === "traffic" ? trafficLabel(hit.trafficKind) : SPECS[hit.kind].name;
-    return `F  Enter Vehicle · ${name}`;
-  }
+  if (hit) return enterLabel(hit);
 
   if (isSocialV2Enabled()) {
     const sit = hangoutPrompt(city, s.x, s.z);

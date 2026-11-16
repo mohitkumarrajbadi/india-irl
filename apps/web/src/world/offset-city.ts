@@ -9,8 +9,7 @@ function shiftTrail(t: TrailRoad, ox: number, oz: number): TrailRoad {
   return { ...t, points: t.points.map((p) => ({ x: p.x + ox, z: p.z + oz })) };
 }
 
-function shiftFlyover(f: Flyover | null, ox: number, oz: number): Flyover | null {
-  if (!f) return null;
+function shiftFlyover(f: Flyover, ox: number, oz: number): Flyover {
   return {
     ...f,
     x: f.x + ox,
@@ -20,8 +19,7 @@ function shiftFlyover(f: Flyover | null, ox: number, oz: number): Flyover | null
   };
 }
 
-function shiftUnderpass(u: Underpass | null, ox: number, oz: number): Underpass | null {
-  if (!u) return null;
+function shiftUnderpass(u: Underpass, ox: number, oz: number): Underpass {
   if (u.axis === "x") {
     return { ...u, c: u.c + oz, a0: u.a0 + ox, a1: u.a1 + ox, crossC: u.crossC + oz };
   }
@@ -87,8 +85,8 @@ export function offsetCityData(city: CityData, ox: number, oz: number): CityData
     })),
     circles: city.circles.map((c) => ({ ...c, x: c.x + ox, z: c.z + oz })),
     trails: city.trails.map((t) => shiftTrail(t, ox, oz)),
-    flyover: shiftFlyover(city.flyover, ox, oz),
-    underpass: shiftUnderpass(city.underpass, ox, oz),
+    flyovers: city.flyovers.map((f) => shiftFlyover(f, ox, oz)),
+    underpasses: city.underpasses.map((u) => shiftUnderpass(u, ox, oz)),
     villages: city.villages.map((v) => shiftVillage(v, ox, oz)),
     bounds: shiftRect(city.bounds, ox, oz),
     spawn: { ...city.spawn, x: city.spawn.x + ox, z: city.spawn.z + oz },

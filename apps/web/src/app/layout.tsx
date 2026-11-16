@@ -1,23 +1,23 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Figtree } from "next/font/google";
+import { Outfit, Syne } from "next/font/google";
 import "./globals.css";
 
-const display = Bricolage_Grotesque({
+const display = Syne({
   subsets: ["latin"],
   variable: "--font-display",
   display: "swap",
 });
 
-const body = Figtree({
+const body = Outfit({
   subsets: ["latin"],
   variable: "--font-body",
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "OMMO — one world, many cities",
+  title: "OMMO — one shared world",
   description:
-    "Build your avatar and walk, ride, and voice-chat with friends in Novapura, Mandipura, Neerabad and Udyogabad — live in the browser.",
+    "Build your look and walk, ride, and hang with friends in one continuous living world — live in the browser.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

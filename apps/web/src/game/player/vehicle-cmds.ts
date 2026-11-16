@@ -1,16 +1,19 @@
 /** Enter / exit parked + traffic vehicles + peer rides (no summon). */
-import { setEngine, unlockAudio } from "@/game/audio";
-import { findNearestEnterable } from "@/game/enterable-vehicles";
+import { setEngine } from "@/game/audio";
+import { findNearestEnterable, trafficKindLabel } from "@/game/enterable-vehicles";
 import { runtime } from "@/game/runtime";
-import { driveAuthorityEnter, driveAuthorityExit } from "@/game/sim/drive-authority";
+import { driveAuthorityExit } from "@/game/sim/drive-authority";
 import { grantMission, toast } from "@/game/store";
-import {
-  claimWorldParked,
-  releaseWorldParked,
-} from "@/game/world-vehicles";
+import { releaseWorldParked } from "@/game/world-vehicles";
 import { sendClaim, useNet, type Peer } from "@/net/store";
-import { PLAYER_PHYSICS } from "@/vehicles/physics-props";
 import { SPECS, type VehicleKind } from "@/vehicles/specs";
+import { ejectTrafficPillion } from "@/vehicles/traffic-tumble";
+import {
+  attachParked,
+  attachTraffic,
+  attachUniversalDrive,
+} from "@/vehicles/universal-controller";
+import { parkedId, trafficId, vehicleRegistry } from "@/vehicles/vehicle-registry";
 import type { CityData } from "@/world/types";
 import { PLAYER_RADIUS, resolveOut } from "./constants.ts";
 import { exitFootPose } from "./exit-pose.ts";
@@ -23,36 +26,7 @@ type Grid = { resolve: (x: number, z: number, r: number, out: { x: number; z: nu
 const REMOUNT_MS = 120_000;
 /** Remount only wins over a closer curb/traffic vehicle inside this radius. */
 const REMOUNT_PRIORITY_M = 4.5;
-
-function enterDrive(
-  s: PlayerState,
-  kind: 1 | 2 | 3,
-  x: number,
-  z: number,
-  yaw: number,
-  worldIndex: number | null,
-  chassisHp?: number,
-): void {
-  s.ds.x = x;
-  s.ds.z = z;
-  s.ds.yaw = yaw;
-  s.ds.speed = 0;
-  s.ds.steer = 0;
-  s.ds.roll = 0;
-  s.mode = "drive";
-  s.kind = kind;
-  s.lastKind = kind;
-  s.seat = 0;
-  s.emote = 0;
-  s.parked = null;
-  s.worldParkedIndex = worldIndex;
-  s.trafficAgentIndex = null;
-  const full = PLAYER_PHYSICS[kind].durability;
-  s.chassisHp = chassisHp != null ? Math.max(0, Math.min(full, chassisHp)) : full;
-  unlockAudio();
-  setEngine(kind, 0);
-  driveAuthorityEnter(kind, { x, z, yaw });
-}
+const LOCAL = "local";
 
 function leaveChassis(s: PlayerState, grid: Grid | null | undefined, city: CityData): void {
   const kind = s.kind as 1 | 2 | 3;
@@ -65,12 +39,19 @@ function leaveChassis(s: PlayerState, grid: Grid | null | undefined, city: CityD
     until: performance.now() + REMOUNT_MS,
     chassisHp: s.chassisHp,
   };
+
   if (s.worldParkedIndex != null) {
+    const id = parkedId(s.worldParkedIndex);
+    vehicleRegistry.writePose(id, { ...pose, speed: 0, chassisHp: s.chassisHp });
+    vehicleRegistry.release(id, LOCAL);
     releaseWorldParked(city, s.worldParkedIndex, pose);
     sendClaim("p", s.worldParkedIndex, true);
     s.parked = { ...stash, worldIndex: s.worldParkedIndex };
     s.worldParkedIndex = null;
   } else if (s.trafficAgentIndex != null) {
+    const id = trafficId(s.trafficAgentIndex);
+    vehicleRegistry.writePose(id, { ...pose, speed: 0, chassisHp: s.chassisHp });
+    vehicleRegistry.release(id, LOCAL);
     const a = runtime.traffic?.agents[s.trafficAgentIndex];
     if (a) {
       a.x = pose.x;
@@ -86,6 +67,7 @@ function leaveChassis(s: PlayerState, grid: Grid | null | undefined, city: CityD
   } else {
     s.parked = stash;
   }
+
   const foot = exitFootPose(s.ds, SPECS[kind].width, grid);
   s.x = foot.x;
   s.z = foot.z;
@@ -130,20 +112,6 @@ export function dismount(s: PlayerState, grid: Grid | null | undefined, city: Ci
   setEngine(0, 0);
 }
 
-function reclaimTraffic(idx: number, pose: { x: number; z: number; yaw: number }): boolean {
-  const a = runtime.traffic?.agents[idx];
-  if (!a) return false;
-  a.x = pose.x;
-  a.z = pose.z;
-  a.yaw = pose.yaw;
-  a.speed = 0;
-  a.taken = true;
-  a.wrecked = false;
-  a.appearT = 0;
-  sendClaim("t", idx, false);
-  return true;
-}
-
 function remountParked(s: PlayerState, city: CityData): boolean {
   const p = s.parked;
   if (!p || performance.now() > p.until) {
@@ -162,12 +130,16 @@ function remountParked(s: PlayerState, city: CityData): boolean {
   }
   if ((p.x - s.x) ** 2 + (p.z - s.z) ** 2 > 18 * 18) return false;
 
-  // Must bind to a world/traffic identity — never orphan-summon.
   if (p.worldIndex != null) {
-    enterDrive(s, p.kind, p.x, p.z, p.yaw, p.worldIndex, p.chassisHp);
-    claimWorldParked(city, p.worldIndex);
-    sendClaim("p", p.worldIndex, false);
-    toast(`Back in your ${SPECS[p.kind].name}`);
+    vehicleRegistry.writePose(parkedId(p.worldIndex), {
+      x: p.x,
+      z: p.z,
+      yaw: p.yaw,
+      chassisHp: p.chassisHp,
+    });
+    const r = attachParked(s, p.worldIndex, p.chassisHp);
+    if (!r.ok) return false;
+    toast(`Back in your ${r.catalog?.name ?? SPECS[p.kind].name}`);
     return true;
   }
 
@@ -176,10 +148,16 @@ function remountParked(s: PlayerState, city: CityData): boolean {
       ? p.trafficIndex
       : findNearbyWreckedTraffic(p.x, p.z);
   if (idx == null) return false;
-  if (!reclaimTraffic(idx, p)) return false;
-  enterDrive(s, p.kind, p.x, p.z, p.yaw, null, p.chassisHp);
-  s.trafficAgentIndex = idx;
-  toast(`Back in your ${SPECS[p.kind].name}`);
+  const agent = runtime.traffic?.agents[idx];
+  vehicleRegistry.writePose(trafficId(idx), {
+    x: p.x,
+    z: p.z,
+    yaw: p.yaw,
+    chassisHp: p.chassisHp,
+  });
+  const r = attachTraffic(s, idx, agent, p.chassisHp);
+  if (!r.ok) return false;
+  toast(`Back in your ${r.catalog?.name ?? SPECS[p.kind].name}`);
   return true;
 }
 
@@ -219,6 +197,7 @@ function releaseNearbyTakenTraffic(x: number, z: number): void {
   a.taken = false;
   a.wrecked = false;
   a.speed = 0;
+  vehicleRegistry.release(trafficId(best), LOCAL);
   sendClaim("t", best, true);
 }
 
@@ -228,26 +207,32 @@ function enterNearbyVehicle(s: PlayerState, city: CityData): boolean {
   if (!hit) return false;
 
   if (hit.source === "parked") {
-    claimWorldParked(city, hit.index);
-    sendClaim("p", hit.index, false);
-    enterDrive(s, hit.kind, hit.x, hit.z, hit.yaw, hit.index);
-    toast(`${SPECS[hit.kind].name} · drive freely`);
+    vehicleRegistry.writePose(parkedId(hit.index), {
+      x: hit.x,
+      z: hit.z,
+      yaw: hit.yaw,
+    });
+    const r = attachParked(s, hit.index);
+    if (!r.ok) {
+      toast(r.reason === "claimed" ? "Someone else is in that vehicle" : "Can't enter");
+      return false;
+    }
+    toast(`${r.catalog?.name ?? "Vehicle"} · drive freely`);
     grantMission("ride");
     return true;
   }
 
   const agent = agents?.[hit.index];
   if (!agent || agent.taken) return false;
-  agent.taken = true;
-  agent.wrecked = false;
-  agent.speed = 0;
-  agent.appearT = 0;
-  enterDrive(s, hit.kind, hit.x, hit.z, hit.yaw, null);
-  s.trafficAgentIndex = hit.index;
-  sendClaim("t", hit.index, false);
-  const label =
-    hit.trafficKind === 3 ? "Bus" : hit.trafficKind === 4 ? "Truck" : SPECS[hit.kind].name;
-  toast(`${label} · drive freely`);
+  const stealing = Math.abs(agent.speed) > 2.5 || agent.hasPillion;
+  if (agent.hasPillion) ejectTrafficPillion(agent);
+  const r = attachTraffic(s, hit.index, agent);
+  if (!r.ok) {
+    toast(r.reason === "claimed" ? "Someone else is in that vehicle" : "Can't enter");
+    return false;
+  }
+  const label = trafficKindLabel(hit.trafficKind);
+  toast(stealing ? `${label} · stolen` : `${label} · drive freely`);
   grantMission("ride");
   return true;
 }
@@ -285,7 +270,6 @@ export function vehicleAction(
     }
   }
 
-  // Prefer the closest physical vehicle in the world over remounting a distant stash.
   const agents = runtime.traffic?.agents ?? null;
   const hit = findNearestEnterable(s.x, s.z, city, agents);
   const hitD2 = hit ? (hit.x - s.x) ** 2 + (hit.z - s.z) ** 2 : Infinity;
@@ -298,7 +282,18 @@ export function vehicleAction(
   if (hit && enterNearbyVehicle(s, city)) return;
   if (remD2 < 18 * 18 && remountParked(s, city)) return;
 
-  toast("No vehicle nearby · walk to the scooter/auto/cab by spawn");
+  // Registry fallback — any free chassis in reach
+  const nearest = vehicleRegistry.nearestFree(s.x, s.z, 18);
+  if (nearest) {
+    const r = attachUniversalDrive(s, nearest.id);
+    if (r.ok) {
+      toast(`${r.catalog?.name ?? "Vehicle"} · drive freely`);
+      grantMission("ride");
+      return;
+    }
+  }
+
+  toast("No vehicle nearby · walk up to any car, bike, or auto");
 }
 
 /** HUD / prompt helper — nearest hop-in peer. */

@@ -13,7 +13,7 @@ import { BOTTOM_COLORS, SKIN_TONES, TOP_COLORS } from "@/avatar/appearance";
 import { PedestrianSim } from "@/world/pedestrians";
 import type { CityData } from "@/world/types";
 
-const PED_COUNTS = { low: 14, medium: 22, high: 32 } as const;
+const PED_COUNTS = { low: 10, medium: 18, high: 28 } as const;
 
 /**
  * Soft chibi sidewalk figure — closer to player avatar proportions than a
@@ -38,7 +38,7 @@ function pedGeometry(): THREE.BufferGeometry {
 export function Pedestrians({ city }: { city: CityData }) {
   // Prefer preference over auto-tier so demote/promote doesn't remount the crowd
   const qualityId = useGame((s) => s.qualityId);
-  const tier = qualityId === "auto" ? "medium" : qualityId;
+  const tier = qualityId === "auto" ? "low" : qualityId;
   const count = PED_COUNTS[tier];
   const set = useMemo(() => {
     const sim = new PedestrianSim(city, count);

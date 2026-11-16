@@ -1,5 +1,5 @@
 /** Lane-change / overtake helpers for TrafficSim. */
-import { DX, DZ, KIND_INFO, type Agent, type Obstacle } from "./traffic-kinds.ts";
+import { DX, DZ, isHeavyTraffic, KIND_INFO, type Agent, type Obstacle } from "./traffic-kinds.ts";
 import type { CityData } from "../world/types.ts";
 
 function roadAlong(city: CityData, i: number, j: number, dir: number) {
@@ -83,7 +83,7 @@ export function pickLaneChange(
   selfIndex: number,
   obstacles: readonly Obstacle[],
 ): LaneChange | null {
-  if (a.laneTimer > 0 || a.kind >= 3) return null;
+  if (a.laneTimer > 0 || isHeavyTraffic(a.kind)) return null;
   if (!forwardBlocked(a, agents, selfIndex, obstacles, 8 + a.speed)) return null;
   const travel = a.stage === 0 ? a.approachDir : a.dir;
   const bi = a.ni - DX[travel]!;

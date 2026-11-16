@@ -1,6 +1,6 @@
 /** Destructible roadside prop definitions — health, thresholds, break modes. */
 
-export type BreakMode = "shatter" | "scatter" | "bend" | "tip";
+export type BreakMode = "shatter" | "scatter" | "bend" | "tip" | "knockaway";
 export type DestMaterial = "wood" | "plastic" | "metal" | "organic";
 export type DestSource = "stall" | "extra" | "lamp" | "tree" | "shrub";
 
@@ -76,7 +76,7 @@ export const EXTRA_DEFS: Partial<Record<number, DestDef>> = {
     hp: 70,
     breakSpeed: 8,
     toughness: 1.6,
-    mode: "bend",
+    mode: "knockaway",
     material: "metal",
     radius: 0.7,
     mass: 180,
@@ -98,7 +98,7 @@ export const LAMP_DEF: DestDef = {
   hp: 48,
   breakSpeed: 6,
   toughness: 1.35,
-  mode: "bend",
+  mode: "knockaway",
   material: "metal",
   radius: 0.55,
   mass: 140,
@@ -128,7 +128,8 @@ export const SHRUB_DEF: DestDef = {
 };
 
 export function debrisCount(mode: BreakMode, severity: number): number {
-  const base = mode === "scatter" ? 7 : mode === "shatter" ? 5 : mode === "tip" ? 3 : 2;
+  const base =
+    mode === "scatter" ? 7 : mode === "shatter" ? 5 : mode === "tip" ? 3 : mode === "knockaway" ? 1 : 2;
   return Math.min(12, Math.floor(base + severity * 4));
 }
 

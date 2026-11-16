@@ -50,6 +50,7 @@ function stashChassis(s: PlayerState, untilMs: number): void {
       // Visible wreck: not `taken` (that sinks the mesh), AI frozen via wrecked.
       a.taken = false;
       a.wrecked = true;
+      a.hasPillion = false;
       a.appearT = 0;
     }
     // Free + wreck pose so peers freeze the same visible chassis.

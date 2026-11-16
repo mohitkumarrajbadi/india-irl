@@ -133,7 +133,7 @@ function clipPushRoadZ(
   }
 }
 
-/** Elevated flyover deck + ramps as a second collider layer in overlapping cells. */
+/** Elevated flyover decks + ramps as a second collider layer in overlapping cells. */
 function pushFlyoverDeck(
   verts: V,
   indices: I,
@@ -143,17 +143,17 @@ function pushFlyoverDeck(
   cellMinZ: number,
   cellMaxZ: number,
 ): void {
-  const fo = city.flyover;
-  if (!fo) return;
-  const x0 = Math.max(cellMinX, fo.x - fo.half);
-  const x1 = Math.min(cellMaxX, fo.x + fo.half);
-  const z0 = Math.max(cellMinZ, fo.z0);
-  const z1 = Math.min(cellMaxZ, fo.z1);
-  if (x1 - x0 < 0.2 || z1 - z0 < 0.2) return;
-  pushHeightGrid(verts, indices, city, x0, z0, x1, z1, (x, z) => {
-    const y = deckY(city, x, z);
-    return y ?? fo.deckY + 0.3;
-  });
+  for (const fo of city.flyovers) {
+    const x0 = Math.max(cellMinX, fo.x - fo.half);
+    const x1 = Math.min(cellMaxX, fo.x + fo.half);
+    const z0 = Math.max(cellMinZ, fo.z0);
+    const z1 = Math.min(cellMaxZ, fo.z1);
+    if (x1 - x0 < 0.2 || z1 - z0 < 0.2) continue;
+    pushHeightGrid(verts, indices, city, x0, z0, x1, z1, (x, z) => {
+      const y = deckY(city, x, z);
+      return y ?? fo.deckY + 0.3;
+    });
+  }
 }
 
 /** Build road trimesh + median curbs for one spatial cell. */

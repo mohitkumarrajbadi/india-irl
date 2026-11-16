@@ -62,19 +62,20 @@
 .meets-label,
 .group h3 {
   margin: 0;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: rgba(243, 239, 228, 0.55);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mist-mute);
 }
 
 .field input {
-  min-height: 48px;
-  padding: 12px 16px;
-  border-radius: 14px;
-  border: 1px solid rgba(243, 239, 228, 0.12);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--cream);
+  min-height: 52px;
+  padding: 14px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(231, 242, 239, 0.12);
+  background: rgba(231, 242, 239, 0.04);
+  color: var(--mist);
   font-size: 17px;
   letter-spacing: -0.02em;
   outline: none;
@@ -82,28 +83,32 @@
   transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
+.field input::placeholder {
+  color: var(--mist-mute);
+}
+
 .field input:focus {
-  border-color: color-mix(in srgb, var(--city-accent) 70%, #fff 8%);
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--city-accent) 18%, transparent);
+  border-color: rgba(94, 240, 200, 0.45);
+  background: rgba(94, 240, 200, 0.06);
+  box-shadow: 0 0 0 4px rgba(94, 240, 200, 0.12);
 }
 
 .social-toggles {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   margin: 4px 0 2px;
-  padding: 10px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.18);
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  background: rgba(231, 242, 239, 0.03);
 }
 
 .social-toggles .toggle-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.88rem;
-  color: rgba(255, 250, 240, 0.88);
+  font-size: 0.9rem;
+  color: var(--mist-dim);
 }
 
 .social-toggles .toggle-row span {

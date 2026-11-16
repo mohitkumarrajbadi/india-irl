@@ -38,7 +38,7 @@ export default function GameCanvas() {
         performance={{ min: 0.55, max: 1, debounce: 350 }}
         camera={{ fov: 56, near: 0.2, far: q.cameraFar, position: [city.spawn.x, 3, city.spawn.z - 6] }}
         gl={{
-          antialias: false,
+          antialias: q.antialias,
           alpha: false,
           powerPreference: "high-performance",
           stencil: false,
@@ -46,7 +46,7 @@ export default function GameCanvas() {
         }}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = 1.02;
+          gl.toneMappingExposure = 1.14;
           gl.shadowMap.type = THREE.PCFShadowMap;
         }}
       >

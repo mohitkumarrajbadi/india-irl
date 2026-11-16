@@ -59,8 +59,8 @@ function emptyFrom(primary: CityData): CityData {
     circles: [],
     trails: [],
     villages: [],
-    flyover: null,
-    underpass: null,
+    flyovers: [],
+    underpasses: [],
     lake: null,
   };
 }
@@ -92,8 +92,8 @@ function appendCity(into: CityData, pack: CityData): void {
   into.circles.push(...pack.circles);
   into.trails.push(...pack.trails);
   into.villages.push(...pack.villages);
-  if (!into.flyover && pack.flyover) into.flyover = pack.flyover;
-  if (!into.underpass && pack.underpass) into.underpass = pack.underpass;
+  into.flyovers.push(...pack.flyovers);
+  into.underpasses.push(...pack.underpasses);
   if (!into.lake && pack.lake) into.lake = pack.lake;
   into.bounds = mergeBounds(into.bounds, pack.bounds);
 }

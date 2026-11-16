@@ -1,11 +1,14 @@
-/** Within-cull traffic tick rate LOD. */
+/** Within-cull traffic tick rate LOD — aggressive on far agents for low-end. */
 
-export type TrafficTickLod = "full" | "half";
+export type TrafficTickLod = "full" | "half" | "quarter";
 
-/** Farther than ~half cull → alternate-frame integration. */
+/** Near = full; mid = half; far = quarter-rate integration. */
 export function trafficTickLod(d2: number, trafficCull: number): TrafficTickLod {
-  const mid = trafficCull * 0.48;
-  return d2 > mid * mid ? "half" : "full";
+  const mid = trafficCull * 0.38;
+  const far = trafficCull * 0.72;
+  if (d2 > far * far) return "quarter";
+  if (d2 > mid * mid) return "half";
+  return "full";
 }
 
 /** Whether this agent index should integrate on this frame. */
@@ -15,5 +18,6 @@ export function trafficShouldTick(
   frame: number,
 ): boolean {
   if (lod === "full") return true;
-  return (agentIndex & 1) === (frame & 1);
+  if (lod === "half") return (agentIndex & 1) === (frame & 1);
+  return (agentIndex & 3) === (frame & 3);
 }

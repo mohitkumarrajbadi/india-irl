@@ -21,7 +21,7 @@ import { PLAYER_PHYSICS } from "@/vehicles/physics-props";
 import { SPECS, stepDrive } from "@/vehicles/specs";
 import { tyreGripMul } from "@/game/tyre-grip";
 import { wetGripMul } from "@/game/weather";
-import { driveGrade } from "@/world/terrain-drive";
+import { driveGrade, lateralGrade } from "@/world/terrain-drive";
 import { sampleTerrain } from "@/world/terrain-sample";
 import type { CityData } from "@/world/types";
 import { tickBlinkerCancel } from "./blinker-cancel.ts";
@@ -82,6 +82,10 @@ export function stepDriveMode(
     const k = 1 - Math.exp(-(usedRapier ? 10 : 14) * dt);
     s.y += (targetY - s.y) * Math.min(1, k);
     if (Math.abs(s.y) < 0.02 && targetY === 0) s.y = 0;
+    // Bank into lateral slope (curves / hill cambers) on top of steer lean
+    const bankScale = phys.separableRider ? 1.2 : 0.5;
+    const bank = Math.max(-0.32, Math.min(0.32, lateralGrade(terrain, s.ds.yaw) * bankScale));
+    s.ds.roll = Math.max(-0.7, Math.min(0.7, s.ds.roll + bank));
   }
   noteDriveStep(usedRapier ? "rapier" : wantRapier ? "fallback" : "arcade", performance.now() - t0, {
     chunks: collisionResidentCount(),

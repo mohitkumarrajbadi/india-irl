@@ -59,6 +59,8 @@ export type DebrisPiece = {
   maxLife: number;
   material: DestMaterial;
   scale: number;
+  /** Tall tumbling pole body vs small shatter chunk. */
+  tall: boolean;
 };
 
 export type DestVisualBucket = {
@@ -122,6 +124,7 @@ export class DestructibleSim {
         maxLife: 1,
         material: "wood",
         scale: 0.2,
+        tall: false,
       });
     }
   }
@@ -247,9 +250,49 @@ export class DestructibleSim {
   }
 
   private spawnDebris(e: DestEntry, yaw: number, speed: number, severity: number): void {
-    const n = debrisCount(e.def.mode, severity);
     const fx = Math.sin(yaw) * Math.sign(speed || 1);
     const fz = Math.cos(yaw) * Math.sign(speed || 1);
+    const closing = Math.abs(speed);
+
+    // Metal poles: whole body tips and flies — GTA knockaway, not shatter.
+    if (e.def.mode === "knockaway") {
+      const d = this.takeDebrisSlot();
+      if (!d) return;
+      const throwMul = 0.55 + severity * 1.4 + Math.min(1.2, closing / 18);
+      d.alive = true;
+      d.x = e.x;
+      d.y = 1.2;
+      d.z = e.z;
+      d.vx = fx * (5 + throwMul * 9) + (Math.random() - 0.5) * 2;
+      d.vz = fz * (5 + throwMul * 9) + (Math.random() - 0.5) * 2;
+      d.vy = 3.5 + throwMul * 4.5;
+      d.spin = (Math.random() > 0.5 ? 1 : -1) * (4 + severity * 8);
+      d.life = 0;
+      d.maxLife = 3.2 + severity * 1.5;
+      d.material = e.def.material;
+      d.scale = 0.55 + e.s * 0.35;
+      d.tall = true;
+      // One small base chunk for dust feel
+      const chip = this.takeDebrisSlot();
+      if (chip) {
+        chip.alive = true;
+        chip.x = e.x;
+        chip.y = 0.3;
+        chip.z = e.z;
+        chip.vx = fx * 2 + (Math.random() - 0.5) * 4;
+        chip.vz = fz * 2 + (Math.random() - 0.5) * 4;
+        chip.vy = 1.5 + Math.random() * 2;
+        chip.spin = (Math.random() - 0.5) * 8;
+        chip.life = 0;
+        chip.maxLife = 1.4;
+        chip.material = e.def.material;
+        chip.scale = 0.14;
+        chip.tall = false;
+      }
+      return;
+    }
+
+    const n = debrisCount(e.def.mode, severity);
     for (let spawned = 0; spawned < n; spawned += 1) {
       const d = this.takeDebrisSlot();
       if (!d) break;
@@ -266,6 +309,7 @@ export class DestructibleSim {
       d.maxLife = 1.8 + Math.random() * 1.4;
       d.material = e.def.material;
       d.scale = e.def.mode === "scatter" ? 0.12 + Math.random() * 0.18 : 0.18 + Math.random() * 0.22;
+      d.tall = false;
     }
   }
 

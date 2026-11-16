@@ -7,66 +7,110 @@ import type { Agent, TrafficKind } from "@/vehicles/traffic-kinds";
 
 type Lamp = { x: number; y: number; z: number; s: number };
 
-/** Local-space lamp anchors matching model-light / model-heavy lens positions. */
-const HEADS: Record<TrafficKind, Lamp[]> = {
-  0: [{ x: 0, y: 0.82, z: 1.32, s: 0.12 }],
-  1: [{ x: 0, y: 1.0, z: 0.64, s: 0.1 }],
-  2: [
+/** Local-space lamp anchors matching vehicle meshes. */
+const HEAD_BASE: Lamp[][] = [
+  [{ x: 0, y: 0.82, z: 1.32, s: 0.12 }],
+  [{ x: 0, y: 1.0, z: 0.64, s: 0.1 }],
+  [
     { x: 0.6, y: 0.78, z: 2.01, s: 0.12 },
     { x: -0.6, y: 0.78, z: 2.01, s: 0.12 },
   ],
-  3: [
+  [
     { x: 0.85, y: 0.78, z: 5.12, s: 0.17 },
     { x: -0.85, y: 0.78, z: 5.12, s: 0.17 },
   ],
-  4: [
+  [
     { x: 0.75, y: 0.72, z: 3.17, s: 0.15 },
     { x: -0.75, y: 0.72, z: 3.17, s: 0.15 },
   ],
-};
+];
 
-const TAILS: Record<TrafficKind, Lamp[]> = {
-  0: [
+const TAIL_BASE: Lamp[][] = [
+  [
     { x: 0.45, y: 0.7, z: -1.05, s: 0.07 },
     { x: -0.45, y: 0.7, z: -1.05, s: 0.07 },
   ],
-  1: [{ x: 0, y: 0.72, z: -0.98, s: 0.08 }],
-  2: [
+  [{ x: 0, y: 0.72, z: -0.98, s: 0.08 }],
+  [
     { x: 0.6, y: 0.8, z: -2.01, s: 0.11 },
     { x: -0.6, y: 0.8, z: -2.01, s: 0.11 },
   ],
-  3: [
+  [
     { x: 0.9, y: 0.7, z: -5.05, s: 0.1 },
     { x: -0.9, y: 0.7, z: -5.05, s: 0.1 },
   ],
-  4: [{ x: 0, y: 1.55, z: -3.7, s: 0.24 }],
-};
+  [{ x: 0, y: 1.55, z: -3.7, s: 0.24 }],
+];
 
-/** Amber corners: +X = left of vehicle. */
-const INDICATORS: Record<TrafficKind, { L: Lamp[]; R: Lamp[] }> = {
-  0: {
-    L: [{ x: 0.55, y: 0.7, z: 1.2, s: 0.08 }, { x: 0.55, y: 0.7, z: -1.0, s: 0.07 }],
-    R: [{ x: -0.55, y: 0.7, z: 1.2, s: 0.08 }, { x: -0.55, y: 0.7, z: -1.0, s: 0.07 }],
+const IND_BASE: { L: Lamp[]; R: Lamp[] }[] = [
+  {
+    L: [
+      { x: 0.55, y: 0.7, z: 1.2, s: 0.08 },
+      { x: 0.55, y: 0.7, z: -1.0, s: 0.07 },
+    ],
+    R: [
+      { x: -0.55, y: 0.7, z: 1.2, s: 0.08 },
+      { x: -0.55, y: 0.7, z: -1.0, s: 0.07 },
+    ],
   },
-  1: {
-    L: [{ x: 0.22, y: 0.72, z: 0.55, s: 0.06 }, { x: 0.18, y: 0.7, z: -0.92, s: 0.06 }],
-    R: [{ x: -0.22, y: 0.72, z: 0.55, s: 0.06 }, { x: -0.18, y: 0.7, z: -0.92, s: 0.06 }],
+  {
+    L: [
+      { x: 0.22, y: 0.72, z: 0.55, s: 0.06 },
+      { x: 0.18, y: 0.7, z: -0.92, s: 0.06 },
+    ],
+    R: [
+      { x: -0.22, y: 0.72, z: 0.55, s: 0.06 },
+      { x: -0.18, y: 0.7, z: -0.92, s: 0.06 },
+    ],
   },
-  2: {
-    L: [{ x: 0.72, y: 0.78, z: 1.95, s: 0.09 }, { x: 0.72, y: 0.8, z: -1.95, s: 0.09 }],
-    R: [{ x: -0.72, y: 0.78, z: 1.95, s: 0.09 }, { x: -0.72, y: 0.8, z: -1.95, s: 0.09 }],
+  {
+    L: [
+      { x: 0.72, y: 0.78, z: 1.95, s: 0.09 },
+      { x: 0.72, y: 0.8, z: -1.95, s: 0.09 },
+    ],
+    R: [
+      { x: -0.72, y: 0.78, z: 1.95, s: 0.09 },
+      { x: -0.72, y: 0.8, z: -1.95, s: 0.09 },
+    ],
   },
-  3: {
-    L: [{ x: 1.0, y: 0.75, z: 5.0, s: 0.1 }, { x: 1.0, y: 0.72, z: -4.9, s: 0.1 }],
-    R: [{ x: -1.0, y: 0.75, z: 5.0, s: 0.1 }, { x: -1.0, y: 0.72, z: -4.9, s: 0.1 }],
+  {
+    L: [
+      { x: 1.0, y: 0.75, z: 5.0, s: 0.1 },
+      { x: 1.0, y: 0.72, z: -4.9, s: 0.1 },
+    ],
+    R: [
+      { x: -1.0, y: 0.75, z: 5.0, s: 0.1 },
+      { x: -1.0, y: 0.72, z: -4.9, s: 0.1 },
+    ],
   },
-  4: {
-    L: [{ x: 0.9, y: 0.72, z: 3.1, s: 0.09 }, { x: 0.9, y: 1.4, z: -3.5, s: 0.1 }],
-    R: [{ x: -0.9, y: 0.72, z: 3.1, s: 0.09 }, { x: -0.9, y: 1.4, z: -3.5, s: 0.1 }],
+  {
+    L: [
+      { x: 0.9, y: 0.72, z: 3.1, s: 0.09 },
+      { x: 0.9, y: 1.4, z: -3.5, s: 0.1 },
+    ],
+    R: [
+      { x: -0.9, y: 0.72, z: 3.1, s: 0.09 },
+      { x: -0.9, y: 1.4, z: -3.5, s: 0.1 },
+    ],
   },
-};
+];
 
-export type BeamBudget = 4 | 6 | 8;
+/** Map each TrafficKind onto a lamp layout family (0–4 bases). */
+const LAMP_FAMILY: TrafficKind[] = [0, 1, 2, 3, 4, 1, 2, 4, 2, 2, 2, 0];
+
+function expandLamps<T>(base: T[]): Record<TrafficKind, T> {
+  const out = {} as Record<TrafficKind, T>;
+  for (let k = 0; k < LAMP_FAMILY.length; k += 1) {
+    out[k as TrafficKind] = base[LAMP_FAMILY[k]!]!;
+  }
+  return out;
+}
+
+const HEADS = expandLamps(HEAD_BASE);
+const TAILS = expandLamps(TAIL_BASE);
+const INDICATORS = expandLamps(IND_BASE);
+
+export type BeamBudget = 2 | 4 | 6 | 8;
 
 type BeamSlot = {
   group: THREE.Group;
