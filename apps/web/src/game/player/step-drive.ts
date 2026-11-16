@@ -4,17 +4,22 @@ import { breakCue } from "@/game/destructible-audio";
 import { massWallSeverity, reportCrash, wallCrashSeverity } from "@/game/crash";
 import { softSpeedScrub } from "@/game/crash-feel";
 import { collidePlayerTraffic } from "@/game/drive-collide";
+import { severityFromRapierImpact } from "@/game/impact-severity";
 import { runtime } from "@/game/runtime";
+import { collisionResidentCount } from "@/game/sim/collision-manager";
 import {
   driveAuthorityStep,
   driveAuthorityUsesWorldColliders,
+  rapierDriveActive,
 } from "@/game/sim/drive-authority";
 import { takeDriveImpact } from "@/game/sim/drive-impact";
+import { noteDriveStep } from "@/game/sim/drive-profile";
 import { toast } from "@/game/store";
 import { clamp } from "@/lib/math";
 import { PLAYER_MASS } from "@/vehicles/mass";
 import { PLAYER_PHYSICS } from "@/vehicles/physics-props";
 import { SPECS, stepDrive } from "@/vehicles/specs";
+import { tyreGripMul } from "@/game/tyre-grip";
 import { wetGripMul } from "@/game/weather";
 import { driveGrade } from "@/world/terrain-drive";
 import { sampleTerrain } from "@/world/terrain-sample";
@@ -34,6 +39,12 @@ export function stepDriveMode(
 ): void {
   const spec = SPECS[s.kind as 1 | 2 | 3];
   const { forward, strafe, sprint, jump } = axes;
+  const terrainPre = sampleTerrain(city, s.ds.x, s.ds.z, s.y);
+  const phys = PLAYER_PHYSICS[s.kind as 1 | 2 | 3];
+  const health = s.chassisHp / Math.max(1, phys.durability);
+  const gripMul = tyreGripMul(terrainPre.grip, wetGripMul());
+  const wantRapier = rapierDriveActive(s.kind);
+  const t0 = performance.now();
   const usedRapier = driveAuthorityStep(s.ds, s.kind, {
     forward,
     strafe,
@@ -41,10 +52,11 @@ export function stepDriveMode(
     sprint,
     jump,
     speed: s.ds.speed,
+    gripMul,
+    health,
   });
   if (!usedRapier) {
-    const phys = PLAYER_PHYSICS[s.kind as 1 | 2 | 3];
-    const terrain = sampleTerrain(city, s.ds.x, s.ds.z);
+    const terrain = terrainPre;
     // Heavier chassis struggle more on steep grades
     const massScale = s.kind === 3 ? 1.35 : s.kind === 1 ? 0.85 : 1;
     const grade = driveGrade(terrain, s.ds.yaw) * massScale;
@@ -55,24 +67,38 @@ export function stepDriveMode(
         steer: clamp(strafe, -1, 1),
         boost: sprint,
         handbrake: jump,
-        health: s.chassisHp / Math.max(1, phys.durability),
-        gripMul: terrain.grip * wetGripMul(),
+        health,
+        gripMul,
         grade,
       },
       spec,
       dt,
     );
-    // Match chassis to apron / flyover / trail height
-    if (terrain.y > 0.05) s.y = terrain.y;
-    else if (s.mode === "drive") s.y = 0;
   }
+  // Soft terrain follow (arcade + Rapier) — kills hard Y snaps on ramps / apron
+  {
+    const terrain = usedRapier ? sampleTerrain(city, s.ds.x, s.ds.z, s.y) : terrainPre;
+    const targetY = Math.abs(terrain.y) > 0.04 ? terrain.y : 0;
+    const k = 1 - Math.exp(-(usedRapier ? 10 : 14) * dt);
+    s.y += (targetY - s.y) * Math.min(1, k);
+    if (Math.abs(s.y) < 0.02 && targetY === 0) s.y = 0;
+  }
+  noteDriveStep(usedRapier ? "rapier" : wantRapier ? "fallback" : "arcade", performance.now() - t0, {
+    chunks: collisionResidentCount(),
+    wantedRapier: wantRapier,
+  });
   const rapierHit = usedRapier ? takeDriveImpact() : null;
   if (rapierHit && now > s.crashCd) {
-    const raw = wallCrashSeverity(0.4 + Math.min(2, Math.abs(rapierHit.speed) * 0.08), rapierHit.speed);
-    const sev = massWallSeverity(raw, PLAYER_MASS[s.kind as 1 | 2 | 3]);
-    if (sev > 0.35) {
+    const kind = s.kind as 1 | 2 | 3;
+    const hit = severityFromRapierImpact(kind, rapierHit.speed, rapierHit.fx, rapierHit.fz);
+    const nx = hit.nx || Math.sin(s.ds.yaw);
+    const nz = hit.nz || Math.cos(s.ds.yaw);
+    if (hit.sev > 0.35) {
       s.crashCd = now + 850;
-      cmds.applyCrashHit(sev, rapierHit.fx || Math.sin(s.ds.yaw), rapierHit.fz || Math.cos(s.ds.yaw), rapierHit.speed);
+      cmds.applyCrashHit(hit.sev, nx, nz, rapierHit.speed, {
+        otherMass: hit.otherMass,
+        closing: hit.closing,
+      });
     }
   }
   for (const e of city.extras) {

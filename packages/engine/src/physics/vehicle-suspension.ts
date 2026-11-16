@@ -20,14 +20,31 @@ export function applyWheelForces(args: {
   linvel: Vec3;
   right: Vec3;
   dt: number;
+  gripMul?: number;
 }): boolean {
   const { rapier, world, body, tuning, wheels, pos, rot, linvel, right, dt } = args;
+  const gripMul = args.gripMul ?? 1;
   let groundedAny = false;
 
   for (let i = 0; i < tuning.wheels.length; i += 1) {
     const w = tuning.wheels[i];
     const ws = wheels[i];
-    if (applyOneWheel({ rapier, world, body, w, ws, pos, rot, linvel, right, mass: tuning.mass, dt })) {
+    if (
+      applyOneWheel({
+        rapier,
+        world,
+        body,
+        w,
+        ws,
+        pos,
+        rot,
+        linvel,
+        right,
+        mass: tuning.mass,
+        dt,
+        gripMul,
+      })
+    ) {
       groundedAny = true;
     }
   }
@@ -46,6 +63,7 @@ function applyOneWheel(a: {
   right: Vec3;
   mass: number;
   dt: number;
+  gripMul: number;
 }): boolean {
   const origin = add(a.pos, rotateVec(a.w.local, a.rot));
   const maxLen = a.w.restLength + a.w.maxTravel + a.w.radius;
@@ -68,7 +86,7 @@ function applyOneWheel(a: {
   a.body.applyImpulseAtPoint({ x: 0, y: forceY * a.dt, z: 0 }, origin, true);
 
   const sideSpeed = a.linvel.x * a.right.x + a.linvel.z * a.right.z;
-  const k = a.w.friction * a.mass * a.dt * 0.15;
+  const k = a.w.friction * a.gripMul * a.mass * a.dt * 0.15;
   a.body.applyImpulseAtPoint(
     { x: -a.right.x * sideSpeed * k, y: 0, z: -a.right.z * sideSpeed * k },
     origin,

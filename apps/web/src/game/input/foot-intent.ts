@@ -40,6 +40,7 @@ export function simInputFromFootAxes(a: FootAxes): SimInput {
     sprint: a.sprint && !a.stunned,
     jump: a.jump && !a.stunned,
     interact: false,
+    gripMul: 1,
     actions,
   };
 }

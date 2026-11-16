@@ -11,18 +11,9 @@ export const KIND_COLOR: Record<string, string> = {
   lake: "#2a6a88",
 };
 
-export type MapJob = {
-  fromX: number;
-  fromZ: number;
-  toX: number;
-  toZ: number;
-  stage: string;
-};
-
 export type MapMarkers = {
   player?: { x: number; z: number; yaw: number };
   peers?: { x: number; z: number; veh: boolean }[];
-  job?: MapJob | null;
   /** Highlight a meet id (menu spawn / deep-link). */
   meetId?: string | null;
   labels?: boolean;

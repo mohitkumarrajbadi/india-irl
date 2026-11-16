@@ -6,6 +6,7 @@ import type { SimBridge } from "@india-irl/engine";
 import type { CityData } from "@/world/types";
 import { cellKey, cellOf, neighborhood } from "./chunk-cell.ts";
 import { packCellColliders } from "./chunk-pack.ts";
+import { physicsLodRing, type PhysicsLodRing } from "./physics-lod.ts";
 import { buildRoadChunk, roadSurfaceY } from "./road-builder.ts";
 
 const loaded = new Set<string>();
@@ -19,12 +20,22 @@ export function collisionResidentCount(): number {
 }
 
 /**
- * Keep worker resident set = 9-cell neighborhood around (x,z).
+ * Keep worker resident set = LOD neighborhood around (x,z).
  * Packs building AABBs + road surface trimesh + median curbs.
+ * @param speed m/s — expands ring at highway speeds; shrinks when nearly stopped
+ * @param region optional terrain region for LOD bias
  */
-export function syncCollisionChunks(bridge: SimBridge, city: CityData, x: number, z: number): void {
+export function syncCollisionChunks(
+  bridge: SimBridge,
+  city: CityData,
+  x: number,
+  z: number,
+  speed = 0,
+  region?: string,
+): void {
   const { cx, cz } = cellOf(x, z);
-  const want = neighborhood(cx, cz);
+  const ring: PhysicsLodRing = physicsLodRing(speed, region);
+  const want = neighborhood(cx, cz, ring);
   const wantKeys = new Set(want.map((c) => cellKey(c.cx, c.cz)));
 
   for (const key of [...loaded]) {

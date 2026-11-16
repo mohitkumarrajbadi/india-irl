@@ -2,6 +2,7 @@
 import { mulberry32, type Rng } from "../lib/rng.ts";
 import { ANIMAL_INFO, type Animal, type AnimalKind } from "./animal-kinds.ts";
 import { scareAnimalHorn, tickAnimal } from "./animal-tick.ts";
+import { ambientLodAt } from "./ambient-lod.ts";
 import { heightAt } from "./terrain-sample.ts";
 import type { CityData } from "./types.ts";
 
@@ -72,7 +73,8 @@ export class AnimalSim {
   }
 
   update(dt: number, px: number, pz: number, vehSpeed: number, now = performance.now()): void {
-    const bubble2 = 160 * 160;
+    const lod = ambientLodAt(this.city, px, pz);
+    const bubble2 = lod.animalBubble * lod.animalBubble;
     for (const a of this.animals) {
       const dx = a.x - px;
       const dz = a.z - pz;

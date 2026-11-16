@@ -1,0 +1,58 @@
+import type { CityConfig } from "./types.ts";
+
+/** City D — corporate and industrial city (fictional). */
+export const udyogabad: CityConfig = {
+  id: "udyogabad",
+  name: "Udyogabad",
+  tagline: "Glass canyons, warehouse belts, elevated transit — after-hours capital.",
+  hubs: ["Glass Mile", "Hub Plaza", "Udyog Park", "Fairway Residences"],
+  seed: 122001,
+  cols: 10,
+  rows: 10,
+  block: [82, 112],
+  arterialEvery: 2,
+  districts: [
+    { name: "Glass Mile", kind: "cbd", i0: 5, i1: 9, j0: 5, j1: 9 },
+    { name: "Udyog Park", kind: "tech", i0: 0, i1: 4, j0: 0, j1: 4 },
+    { name: "Fairway Residences", kind: "resi", i0: 0, i1: 4, j0: 5, j1: 9 },
+    { name: "Food Sector", kind: "market", i0: 5, i1: 8, j0: 0, j1: 4 },
+    { name: "Leisure Valley", kind: "park", i0: 8, i1: 9, j0: 0, j1: 3 },
+  ],
+  landmarks: [
+    { kind: "cyberHub", bi: 5, bj: 5, label: "Hub Plaza" },
+    { kind: "ecospace", bi: 8, bj: 8, label: "Glass Mile Towers" },
+  ],
+  meets: [
+    { id: "hub-plaza", label: "Hub Plaza", bi: 5, bj: 5, blurb: "After-office default." },
+    { id: "glass-mile", label: "Glass Mile Towers", bi: 8, bj: 8, blurb: "Glass canyon meet." },
+    { id: "food-sector", label: "Food Sector Street", bi: 6, bj: 2, blurb: "Momos then plans." },
+  ],
+  spawn: { bi: 3, bj: 3 },
+  metro: { axis: "z", index: 5, name: "Udyogabad Rapid", color: "#2a9d8f" },
+  palette: {
+    ground: "#7a8470",
+    paver: "#a8b0b8",
+    concrete: ["#e8eef2", "#d0d8e0", "#c0d0e0", "#f0f2f4", "#b8c8d8", "#d8e0e8"],
+    glass: ["#1a5a98", "#2a78b8", "#0e3a70", "#3a90d0", "#2468a0"],
+    old: ["#c18a62", "#b27a58", "#d1a77c"],
+    tree: ["#3a6a30", "#4d7a3a", "#2a5a28", "#5a8a40"],
+    bloom: ["#e0527c", "#e8913c", "#f2c230"],
+  },
+  livery: { auto: ["#1f7a3a", "#f2c230"], cab: ["#f2c230", "#1b1b1b"] },
+  shops: ["ਪੰਜਾਬੀ ਢਾਬਾ · Dhaba", "ਛੋਲੇ ਭਟੂਰੇ · Chole", "ਲੱਸੀ ਵਾਲਾ · Lassi", "मोमो कॉर्नर · Momos", "Cyber Cafe", "Pub & Grill", "कुल्फी · Kulfi", "परांठे वाली · Paranthe", "Metro Mart", "Barista Lane", "Startup Hub", "Food Court"],
+  billboards: [
+    "Glass Mile · Hiring",
+    "Udyogabad Rising",
+    "Rapid · Hop On",
+    "Hub Plaza · After Hours",
+    "Expressway · Next Exit: Office",
+    "Udyog Park · Build Fast",
+    "Glass. Greens. Growth.",
+    "Udyogabad · Work Hard Play Hard",
+  ],
+  skyline: { hills: 0.08, hillColor: "#6a7880", haze: "#c8d0d8" },
+  cows: 3,
+  dogs: 13,
+  goats: 1,
+  startHour: 11,
+};

@@ -12,10 +12,11 @@ export function HudHelp() {
       {help ? (
         <ul>
           <li><kbd>WASD</kbd> move · <kbd>Shift</kbd> sprint · <kbd>Space</kbd> jump / handbrake</li>
-          <li><kbd>F</kbd> enter / exit nearby vehicle · <kbd>E</kbd> sit / interact</li>
-          <li><kbd>Q</kbd> / <kbd>.</kbd> indicators · <kbd>H</kbd> horn</li>
+          <li><kbd>F</kbd> enter / exit nearby vehicle · <kbd>E</kbd> flat / sit</li>
+          <li><kbd>Q</kbd> / <kbd>.</kbd> indicators · <kbd>H</kbd> horn · <kbd>P</kbd> garage paint</li>
           <li>Hold <kbd>Tab</kbd> emotes · <kbd>R</kbd>/<kbd>G</kbd> fight</li>
           <li><kbd>M</kbd> mic · <kbd>N</kbd> map · <kbd>T</kbd> time · <kbd>J</kbd> weather</li>
+          <li><kbd>C</kbd> convoy / flat invite · <kbd>Shift+C</kbd> leave convoy</li>
         </ul>
       ) : null}
     </section>

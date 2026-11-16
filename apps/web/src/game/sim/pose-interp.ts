@@ -17,11 +17,11 @@ export function resetPoseInterp(): void {
   next = null;
 }
 
-export function pushDriveSample(pose: DrivePose & { y?: number }, at = performance.now()): void {
+export function pushDriveSample(pose: DrivePose, at = performance.now()): void {
   const yaw = pose.yaw;
   const sample: PoseSample = {
     x: pose.x,
-    y: pose.y ?? 0,
+    y: pose.y,
     z: pose.z,
     qx: 0,
     qy: Math.sin(yaw * 0.5),
@@ -46,12 +46,12 @@ export function sampleDrivePose(now = performance.now()): DrivePose | null {
   if (!prev || !next) return null;
   const target = now - BEHIND_MS;
   if (target <= prev.at) {
-    return { x: prev.x, z: prev.z, yaw: prev.yaw, speed: prev.speed, roll: prev.roll };
+    return { x: prev.x, y: prev.y, z: prev.z, yaw: prev.yaw, speed: prev.speed, roll: prev.roll };
   }
   if (target >= next.at || next.at <= prev.at) {
-    return { x: next.x, z: next.z, yaw: next.yaw, speed: next.speed, roll: next.roll };
+    return { x: next.x, y: next.y, z: next.z, yaw: next.yaw, speed: next.speed, roll: next.roll };
   }
   const t = (target - prev.at) / (next.at - prev.at);
   const p = lerpPose(prev, next, t);
-  return { x: p.x, z: p.z, yaw: p.yaw, speed: p.speed, roll: p.roll };
+  return { x: p.x, y: p.y, z: p.z, yaw: p.yaw, speed: p.speed, roll: p.roll };
 }

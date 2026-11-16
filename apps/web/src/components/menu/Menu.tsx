@@ -84,7 +84,7 @@ export default function Menu() {
         <div className="stage-wash" aria-hidden />
         <PreviewCanvas look={look} emote={emote} pulse={pulse} cityId={cityId} />
         <div className="stage-badge">
-          <span>Your look · {cityUi.nick}</span>
+          <span>Your look · OMMO</span>
           <strong>{localTitle || info.title}</strong>
           <em className="identity-caption">{caption}</em>
         </div>

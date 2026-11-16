@@ -14,8 +14,8 @@ export type Cop = {
 };
 
 export const CITY_COPS: Record<string, number> = {
-  bengaluru: 5,
-  pune: 4,
-  hyderabad: 5,
-  gurugram: 6,
+  novapura: 5,
+  mandipura: 4,
+  neerabad: 5,
+  udyogabad: 6,
 };

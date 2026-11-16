@@ -2,11 +2,13 @@
 import type { Actor, ActorFrame } from "@/avatar/actor";
 import { footstep, setAmbient, setEngine, setRainAmbience, tickDistantTraffic } from "@/game/audio";
 import { weather } from "@/game/weather";
+import { headlightPower, rainAudioMul } from "@/gfx/atmosphere-fx";
 import { env } from "@/gfx/env";
 import { selfSay } from "@/game/runtime";
 import { districtNameAt } from "@/world/generate";
 import type { CityData } from "@/world/types";
 import type * as THREE from "three";
+import { PLAYER_PHYSICS } from "@/vehicles/physics-props";
 import { ambientKindHint } from "./ambient-hint.ts";
 import type { PlayerState } from "./types.ts";
 
@@ -31,6 +33,11 @@ export function syncActorFrame(
   frame.speed = s.mode === "drive" ? s.ds.speed : s.actual;
   frame.roll = s.mode === "drive" ? s.ds.roll : 0;
   frame.y = s.y;
+  if (s.mode === "drive" && (s.kind === 1 || s.kind === 2 || s.kind === 3)) {
+    frame.chassisHealth = s.chassisHp / Math.max(1, PLAYER_PHYSICS[s.kind].durability);
+  } else {
+    frame.chassisHealth = 1;
+  }
   frame.blinker =
     s.mode !== "drive"
       ? 0
@@ -55,8 +62,7 @@ export function syncHeadlights(s: PlayerState, lights: THREE.Group | null): void
   if (!on) return;
   lights.position.set(s.ds.x, 0.8, s.ds.z);
   lights.rotation.y = s.ds.yaw;
-  // Rain / dusk — kick beams up so wet streets read
-  const power = Math.max(env.night, weather.rain * 0.55, weather.fog * 0.35) * 120;
+  const power = headlightPower(env.night, weather.rain, weather.fog, weather.wet);
   for (const c of lights.children) {
     if ((c as THREE.SpotLight).isSpotLight) (c as THREE.SpotLight).intensity = power;
   }
@@ -74,5 +80,5 @@ export function tickPlayerAudio(s: PlayerState, city: CityData, dt: number): voi
     setAmbient(hint, 1);
   }
   tickDistantTraffic(env.night, dt);
-  setRainAmbience(weather.rain);
+  setRainAmbience(rainAudioMul(weather.rain, weather.wet));
 }

@@ -131,3 +131,52 @@ export function debrisCount(mode: BreakMode, severity: number): number {
   const base = mode === "scatter" ? 7 : mode === "shatter" ? 5 : mode === "tip" ? 3 : 2;
   return Math.min(12, Math.floor(base + severity * 4));
 }
+
+/**
+ * Per-material damage gates — softer organics register earlier; metal needs commitment.
+ * breakHpFrac: HP must drop below this fraction (or severity clears the gate) to shatter.
+ */
+export type MaterialThreshold = {
+  minSeverity: number;
+  breakHpFrac: number;
+  /** Severity that forces a break even with HP remaining. */
+  forceBreakSev: number;
+};
+
+export const MATERIAL_THRESHOLDS: Record<DestMaterial, MaterialThreshold> = {
+  organic: { minSeverity: 0.06, breakHpFrac: 0.4, forceBreakSev: 0.48 },
+  wood: { minSeverity: 0.08, breakHpFrac: 0.45, forceBreakSev: 0.55 },
+  plastic: { minSeverity: 0.1, breakHpFrac: 0.42, forceBreakSev: 0.52 },
+  metal: { minSeverity: 0.14, breakHpFrac: 0.35, forceBreakSev: 0.62 },
+};
+
+/** Props peers should see broken — not local-only fodder (shrubs). */
+export function isSharedBreakSource(source: DestSource): boolean {
+  return source === "stall" || source === "extra" || source === "lamp" || source === "tree";
+}
+
+export function hitSeverity(
+  closing: number,
+  vehicleMass: number,
+  def: DestDef,
+): number {
+  const massFactor = vehicleMass / (vehicleMass + def.mass);
+  return Math.min(
+    1,
+    ((closing - def.breakSpeed * 0.4) / 14) * massFactor * (1.15 / def.toughness),
+  );
+}
+
+export type HitPhase = "ignore" | "damage" | "break";
+
+export function classifyHit(
+  severity: number,
+  hpAfter: number,
+  def: DestDef,
+): HitPhase {
+  const th = MATERIAL_THRESHOLDS[def.material];
+  if (severity < th.minSeverity) return "ignore";
+  if (hpAfter <= 0 || severity >= th.forceBreakSev) return "break";
+  if (hpAfter <= def.hp * th.breakHpFrac) return "break";
+  return "damage";
+}

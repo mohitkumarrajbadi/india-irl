@@ -1,10 +1,13 @@
-import { between, mulberry32, pick, type Rng } from "../lib/rng.ts";
+import { between, mulberry32, type Rng } from "../lib/rng.ts";
 import type { Obb } from "../lib/obb.ts";
 import { crushPedsInObb, type PedCrushResult } from "./ped-crush.ts";
 import { cityPedMult, collectPedEdges, pickDenseEdge, type PedEdge } from "./ped-edges.ts";
 import { collectLoiterSpots, rollPedIntent, type LoiterSpot, type PedIntent } from "./ped-intent.ts";
 import { reactPedsToHorn, scareNearDriver } from "./ped-scare.ts";
-import { tickPed } from "./ped-tick.ts";
+import { ambientLodAt } from "./ambient-lod.ts";
+import { pickEdgeNearAnchors } from "./ped-edge-bias.ts";
+import { pedSpawnOffset } from "./ped-spawn.ts";
+import { setPedCrossCtx, tickPed } from "./ped-tick.ts";
 import { isRuralAt } from "./terrain-sample.ts";
 import type { CityData } from "./types.ts";
 
@@ -49,18 +52,24 @@ export class PedestrianSim {
   private readonly spots: LoiterSpot[];
   private readonly rng: Rng;
   private scareAcc = 0;
+  private readonly meetPts: { x: number; z: number }[];
+  private readonly villagePts: { x: number; z: number }[];
 
   constructor(city: CityData, count: number) {
     this.city = city;
     this.rng = mulberry32(city.config.seed ^ 0x51dea170);
     this.edges = collectPedEdges(city);
     this.spots = collectLoiterSpots(city);
-    const n = Math.max(8, Math.floor(count * cityPedMult(city.config.id)));
+    this.meetPts = city.meets.map((m) => ({ x: m.x, z: m.z }));
+    this.villagePts = city.villages.map((v) => ({ x: v.x, z: v.z }));
+    // Meet plazas get denser foot traffic (social freeroam).
+    const plazaBoost = 1 + Math.min(0.35, this.meetPts.length * 0.08);
+    const n = Math.max(8, Math.floor(count * cityPedMult(city.config.id) * plazaBoost));
     for (let i = 0; i < n; i += 1) this.peds.push(this.spawn(true));
   }
 
   private spawn(anywhere: boolean): Ped {
-    const edge = pickDenseEdge(this.rng, this.edges);
+    const edge = this.pickEdge();
     const t = anywhere ? this.rng() : 0;
     const dir = this.rng() < 0.5 ? 1 : -1;
     const x = edge.ax + (edge.bx - edge.ax) * t;
@@ -83,8 +92,17 @@ export class PedestrianSim {
     };
   }
 
+  /** Bias sidewalks toward meet plazas + village settlements. */
+  private pickEdge(): PedEdge {
+    const meet = pickEdgeNearAnchors(this.rng, this.edges, this.meetPts, 0.42, 55);
+    if (meet) return meet;
+    const village = pickEdgeNearAnchors(this.rng, this.edges, this.villagePts, 0.28, 70);
+    if (village) return village;
+    return pickDenseEdge(this.rng, this.edges);
+  }
+
   private retarget(p: Ped, selfIndex: number, night: number): void {
-    const e = pick(this.rng, this.edges);
+    const e = this.pickEdge();
     p.ax = e.ax;
     p.az = e.az;
     p.bx = e.bx;
@@ -146,33 +164,44 @@ export class PedestrianSim {
     night = 0,
     driver?: { yaw: number; speed: number; vehicle: number },
   ): void {
-    const bubble2 = 220 * 220;
+    const lod = ambientLodAt(this.city, px, pz);
+    const bubble2 = lod.pedBubble * lod.pedBubble;
+    const mid2 = lod.pedMid * lod.pedMid;
+    const clearR = Math.max(40, lod.pedBubble * 0.75);
     const rural = isRuralAt(this.city, px, pz);
+    setPedCrossCtx({
+      xs: this.city.xs,
+      zs: this.city.zs,
+      timeSec: now * 0.001,
+    });
     this.scareAcc += dt;
     if (this.scareAcc > 0.2 && driver && !rural) {
       this.scareAcc = 0;
       scareNearDriver(this.peds, px, pz, driver.yaw, driver.speed, driver.vehicle, now);
     }
+    const frame = (now / 16) | 0;
     for (let i = 0; i < this.peds.length; i += 1) {
       const p = this.peds[i]!;
       const dxp = p.x - px;
       const dzp = p.z - pz;
       const d2 = dxp * dxp + dzp * dzp;
       // Village / hill: pull crowd back into the city — no sidewalk swarm on the ghats
-      if (rural && d2 < 55 * 55) {
+      if (rural && d2 < clearR * clearR) {
         Object.assign(p, this.spawn(true));
         continue;
       }
       if (d2 > bubble2) {
         Object.assign(p, this.spawn(true));
         if (!rural) {
-          const ang = this.rng() * Math.PI * 2;
-          const r = 40 + this.rng() * 90;
-          p.x = px + Math.cos(ang) * r;
-          p.z = pz + Math.sin(ang) * r;
+          const yaw = driver?.yaw ?? 0;
+          const off = pedSpawnOffset(this.rng, px, pz, yaw, lod.pedBubble, lod.pedMid);
+          p.x = off.x;
+          p.z = off.z;
         }
         continue;
       }
+      // Sparse regions: alternate-frame ticks beyond mid-range
+      if (lod.density < 0.85 && d2 > mid2 && (i & 1) !== (frame & 1)) continue;
       tickPed(p, dt, px, pz, now, this.rng, (ped) => this.retarget(ped, i, night), night);
     }
   }

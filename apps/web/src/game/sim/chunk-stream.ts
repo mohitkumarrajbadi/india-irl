@@ -1,5 +1,5 @@
 /**
- * Keep the sim worker’s resident collider set = 9-cell neighborhood.
+ * Keep the sim worker’s resident collider set = physics-LOD neighborhood.
  * Delegates to CollisionManager (road trimesh + obstacle AABBs).
  */
 import type { SimBridge } from "@india-irl/engine";

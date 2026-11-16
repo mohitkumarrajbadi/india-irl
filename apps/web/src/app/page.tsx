@@ -49,10 +49,10 @@ export async function generateMetadata(props: {
   const meetLabel =
     city && deep.meet ? city.meets.find((m) => m.id === deep.meet)?.label ?? null : null;
 
-  const where = meetLabel && city ? `${meetLabel}, ${city.name}` : city?.name ?? "India's IT cities";
+  const where = meetLabel && city ? `${meetLabel}, ${city.name}` : city?.name ?? "OMMO";
   const live = cityId ? await liveLine(cityId, deep.meet) : null;
 
-  const title = city ? `India IRL · ${where}` : "India IRL";
+  const title = city ? `OMMO · ${where}` : "OMMO";
   const description = live
     ? `Walk into ${where}. ${live}. No install.`
     : `Walk into a room of people in ${where}. Browser hangout — no install.`;

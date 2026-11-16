@@ -70,10 +70,34 @@
 .brand-hero {
   margin: 0;
   font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
-  font-size: clamp(40px, 4.2vw, 56px);
-  font-weight: 750;
-  letter-spacing: -0.05em;
+  font-size: clamp(44px, 4.6vw, 62px);
+  font-weight: 780;
+  letter-spacing: 0.04em;
   line-height: 0.96;
+  color: var(--cream);
+}
+
+.menu-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.menu-nav-btn {
+  border: 1px solid rgba(243, 239, 228, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(243, 239, 228, 0.72);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.menu-nav-btn.on {
+  border-color: color-mix(in srgb, var(--city-accent) 55%, transparent);
+  background: var(--city-soft);
   color: var(--cream);
 }
 

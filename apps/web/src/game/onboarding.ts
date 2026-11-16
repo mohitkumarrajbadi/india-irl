@@ -10,7 +10,7 @@ export type OnboardStep =
   | "customize"
   | "enter"
   | "welcome_chai"
-  | "easy_job"
+  | "first_ride"
   | "wave_prompt"
   | "intent"
   | "comeback_card"
@@ -27,6 +27,22 @@ export type OnboardState = {
 };
 
 const STORAGE = "india-irl:onboard:v1";
+
+const STEPS: OnboardStep[] = [
+  "customize",
+  "enter",
+  "welcome_chai",
+  "first_ride",
+  "wave_prompt",
+  "intent",
+  "comeback_card",
+  "done",
+];
+
+function migrateStep(step: unknown): OnboardStep {
+  if (step === "easy_job") return "first_ride";
+  return STEPS.includes(step as OnboardStep) ? (step as OnboardStep) : "customize";
+}
 
 const DEFAULT: OnboardState = {
   version: 1,
@@ -51,7 +67,7 @@ export function loadOnboard(): OnboardState {
         p.intent === "friends" || p.intent === "dating" || p.intent === "referrals" || p.intent === "vibing"
           ? p.intent
           : null,
-      step: (p.step as OnboardStep) || "customize",
+      step: migrateStep(p.step),
       firstEmoteDone: !!p.firstEmoteDone,
       comebackDistrict: typeof p.comebackDistrict === "string" ? p.comebackDistrict.slice(0, 48) : "",
     };

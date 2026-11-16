@@ -1,16 +1,18 @@
 "use client";
 
 import { useFrame } from "@react-three/fiber";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type * as THREE from "three";
 import { DestructibleSim } from "@/game/destructible-sim";
+import { lampGlow } from "@/gfx/atmosphere-fx";
 import { env } from "@/gfx/env";
-import { runtime } from "@/game/runtime";
+import { live, runtime } from "@/game/runtime";
+import { weather } from "@/game/weather";
 import type { CityData } from "@/world/types";
 import type { PropBuildCtx } from "./city-props-ctx";
 import { buildExtras } from "./city-props-extras";
 import { buildFlora } from "./city-props-flora";
-import { buildLamps } from "./city-props-lamps";
+import { buildLamps, updateLampLights } from "./city-props-lamps";
 import { buildStreetLife } from "./city-props-life";
 import { buildParked } from "./city-props-parked";
 import { DestructibleDebris } from "./DestructibleDebris";
@@ -47,11 +49,30 @@ export function CityProps({ city }: { city: CityData }) {
     };
   }, [set]);
 
+  const lastKey = useRef("");
+  const glowRef = useRef({ head: 0, poolOpacity: 0, lightIntensity: 0 });
   useFrame((_, dt) => {
     const n = env.night;
-    set.headMat.color.setRGB(0.3 + 0.9 * n, 0.28 + 0.78 * n, 0.24 + 0.5 * n);
-    set.poolMat.opacity = n * 0.55;
-    set.pools.visible = n > 0.04;
+    const key = `${n.toFixed(2)}:${weather.wet.toFixed(2)}:${weather.fog.toFixed(2)}`;
+    if (key !== lastKey.current) {
+      lastKey.current = key;
+      const glow = lampGlow(n, weather.wet, weather.fog);
+      glowRef.current = glow;
+      const h = glow.head;
+      // Hot sodium head — brighter when fully night
+      set.headMat.color.setRGB(0.45 + 1.2 * h, 0.38 + 0.9 * h, 0.22 + 0.4 * h);
+      set.poolMat.opacity = glow.poolOpacity;
+      set.pools.visible = glow.poolOpacity > 0.03;
+    }
+    updateLampLights(
+      city.lamps,
+      set.spots,
+      set.points,
+      live.x,
+      live.z,
+      n,
+      glowRef.current.lightIntensity,
+    );
     set.sim.tick(Math.min(dt, 0.05), performance.now());
   });
 
@@ -60,6 +81,7 @@ export function CityProps({ city }: { city: CityData }) {
       {set.meshes.map((m, i) => (
         <primitive key={i} object={m} />
       ))}
+      <primitive object={set.lightsRoot} />
       <DestructibleDebris sim={set.sim} />
     </>
   );

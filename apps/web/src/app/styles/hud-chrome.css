@@ -4,35 +4,40 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  font-size: 13px;
+  font-size: 12.5px;
+  letter-spacing: 0.01em;
 }
 
 .panel {
   position: absolute;
   background: var(--glass);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  backdrop-filter: blur(8px);
-  padding: 12px 14px;
+  border-radius: var(--hud-radius);
+  backdrop-filter: blur(12px) saturate(1.15);
+  -webkit-backdrop-filter: blur(12px) saturate(1.15);
+  padding: 11px 13px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
 }
 
 .panel h1 {
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.2em;
 }
 
 .brand {
-  top: 14px;
-  left: 14px;
-  min-width: 220px;
+  top: 12px;
+  left: 12px;
+  min-width: 200px;
+  max-width: min(260px, 42vw);
 }
 
 .brand .eyebrow {
-  margin: 3px 0 8px;
-  font-size: 12px;
+  margin: 2px 0 7px;
+  font-size: 11px;
   color: var(--marigold);
+  opacity: 0.92;
 }
 
 .vibe-chip {

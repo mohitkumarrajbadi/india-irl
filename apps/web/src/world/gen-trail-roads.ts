@@ -104,7 +104,7 @@ export function buildTrailRoads(
 
   const used = new Set<string>();
   let villageCount = 0;
-  const maxV = cfg.id === "gurugram" ? 5 : 8;
+  const maxV = cfg.id === "udyogabad" ? 5 : 8;
   for (const e of edgeExits) {
     if (villageCount >= maxV) break;
     const key = `${Math.round(e.x / 40)},${Math.round(e.z / 40)}`;
@@ -185,9 +185,9 @@ export function buildTrailRoads(
     }
   }
 
-  const climbLen = cfg.id === "gurugram" ? 140 : cfg.id === "bengaluru" ? 360 : 280;
+  const climbLen = cfg.id === "udyogabad" ? 140 : cfg.id === "novapura" ? 360 : 280;
   trails.push(hillClimb(rng, sx, sz, prof.hillAx, prof.hillAz, climbLen));
-  if (cfg.id !== "gurugram") {
+  if (cfg.id !== "udyogabad") {
     trails.push(hillClimb(rng, sx + (rng() - 0.5) * 40, sz + (rng() - 0.5) * 40, prof.hillAx, prof.hillAz, climbLen * 0.6));
   }
 

@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { bengaluru } from "./city-bengaluru.ts";
+import { novapura } from "./city-novapura.ts";
 import { generateCity } from "./generate.ts";
 import { isRuralAt, sampleTerrain } from "./terrain-sample.ts";
 import { nearestTrail, onTrailRoad } from "./trail-query.ts";
 
-const city = generateCity(bengaluru);
+const city = generateCity(novapura);
 assert.ok(city.trails.length >= 2, `expected trails, got ${city.trails.length}`);
 const villages = city.trails.filter((t) => t.kind === "village");
 const hills = city.trails.filter((t) => t.kind === "hill");
@@ -32,8 +32,23 @@ assert.ok(vHit && vHit.trail.kind === "village");
 assert.ok(city.stalls.length > 0 || city.cows.length > 0);
 assert.ok(city.flyover, "flyover expected");
 const fo = city.flyover!;
-const under = sampleTerrain(city, fo.x, (fo.z0 + fo.z1) * 0.5);
-// On deck when centered
-assert.ok(under.y >= fo.deckY * 0.9, `flyover deck y=${under.y}`);
+const midZ = (fo.z0 + fo.z1) * 0.5;
+const under = sampleTerrain(city, fo.x, midZ, 0);
+assert.ok(under.y < 1.5, `under flyover should be ground, y=${under.y}`);
+const onDeck = sampleTerrain(city, fo.x, midZ, fo.deckY);
+assert.ok(onDeck.y >= fo.deckY * 0.9, `on deck with yHint, y=${onDeck.y}`);
+const rampZ = fo.z0 + 10;
+const ramp = sampleTerrain(city, fo.x, rampZ);
+assert.ok(ramp.y > 1 && ramp.y < fo.deckY + 0.5, `ramp elevates, y=${ramp.y}`);
+
+assert.ok(city.underpass, "underpass expected");
+const up = city.underpass!;
+const trough = sampleTerrain(city, (up.a0 + up.a1) * 0.5, up.c);
+assert.ok(trough.y <= up.floorY + 0.2, `underpass trough y=${trough.y}`);
+assert.ok(city.villages.length >= 1, "village settlement expected");
+
+// Hill guardrails leave AABB rail segments in the collide set
+const hillBoxes = city.boxes.filter((b) => (b.h ?? 0) > 0.5 && (b.h ?? 0) < 1.2);
+assert.ok(hillBoxes.length >= 8, `expected hill rail boxes, got ${hillBoxes.length}`);
 
 console.log("trail-roads.test.ts ok");

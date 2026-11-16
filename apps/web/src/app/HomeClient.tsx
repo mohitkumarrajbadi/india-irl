@@ -10,7 +10,7 @@ const GameCanvas = dynamic(() => import("@/components/world/GameCanvas"), {
 });
 const Menu = dynamic(() => import("@/components/menu/Menu"), {
   ssr: false,
-  loading: () => <div className="boot">India IRL</div>,
+  loading: () => <div className="boot">OMMO</div>,
 });
 
 export default function HomeClient() {

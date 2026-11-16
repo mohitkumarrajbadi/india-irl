@@ -1,12 +1,16 @@
 "use client";
 
-/** Left pane: brand, vibe, name, city, enter CTA. */
-import { levelInfo, missionsDone, type VibeState } from "@/game/vibe";
+/** Left pane: OMMO brand, identity, destinations, enter CTA. */
+import { useState } from "react";
+import { levelInfo, missionsDone, MISSIONS, type VibeState } from "@/game/vibe";
 import { honestHeadcount, type PlanInfo, type StatsMap } from "@/net/stats";
 import { CITIES, CITY_IDS } from "@/world/cities";
 import { useGame } from "@/game/store";
 import type { CityId } from "@/world/types";
-import { CityPicker } from "./CityPicker";
+import { DestinationBrowser } from "./DestinationBrowser";
+import { SocialToggles } from "./SocialToggles";
+
+type Nav = "play" | "character" | "friends" | "settings";
 
 type Props = {
   name: string;
@@ -26,6 +30,7 @@ type Props = {
 };
 
 export function MenuSetup(p: Props) {
+  const [nav, setNav] = useState<Nav>("play");
   const city = CITIES[p.cityId];
   const info = levelInfo(p.vibe.xp);
   const cityStat = p.stats[p.cityId];
@@ -34,6 +39,8 @@ export function MenuSetup(p: Props) {
   const talking = meetStat ? meetStat.talking : cityStat?.talking ?? 0;
   const totalOnline = CITY_IDS.reduce((n, id) => n + (p.stats[id]?.online ?? 0), 0);
   const talkingAll = CITY_IDS.reduce((n, id) => n + (p.stats[id]?.talking ?? 0), 0);
+  const ommoOnline = p.stats.ommo?.online ?? 0;
+  const worldPop = ommoOnline > 0 ? ommoOnline : totalOnline;
   const done = missionsDone(p.vibe);
   const joins = cityStat?.recentJoins ?? [];
 
@@ -42,15 +49,15 @@ export function MenuSetup(p: Props) {
       <div className="menu-pane">
         <header className="menu-hero">
           <h1 className="brand-hero">
-            India <em>IRL</em>
+            OMMO
           </h1>
           <p className="city-line">
-            Hang out in <strong>{city.name}</strong>
+            One world · start near <strong>{p.place}</strong>
           </p>
-          <p className="hook-line">Build a look. Pick a plaza. Walk into a live room.</p>
+          <p className="hook-line">Meet, explore, drive, and hang out in a living shared world.</p>
           <p className="live-pill">
             <span className="live-dot" />
-            {honestHeadcount(p.meetId ? here : totalOnline, p.meetId ? talking : talkingAll, p.place)}
+            {honestHeadcount(p.meetId ? here : worldPop, p.meetId ? talking : talkingAll, p.place)}
           </p>
           {joins.length > 0 ? (
             <div className="join-ticker" aria-live="polite">
@@ -63,7 +70,27 @@ export function MenuSetup(p: Props) {
           ) : null}
         </header>
 
-        <div className="vibe-strip" title={`${info.into}/${info.need} vibe · ${done}/5 missions`}>
+        <nav className="menu-nav" aria-label="Lobby">
+          {(
+            [
+              ["play", "Play"],
+              ["character", "Character"],
+              ["friends", "Friends"],
+              ["settings", "Settings"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              className={nav === id ? "menu-nav-btn on" : "menu-nav-btn"}
+              onClick={() => setNav(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="vibe-strip" title={`${info.into}/${info.need} vibe · ${done}/${MISSIONS.length} missions`}>
           <strong>Lv {info.level}</strong>
           <span>{p.localTitle || info.title}</span>
           <div className="xp-bar" aria-hidden>
@@ -72,18 +99,48 @@ export function MenuSetup(p: Props) {
           <em className={p.vibe.streak > 0 ? "on" : ""}>{p.vibe.streak || 0}d</em>
         </div>
 
-        <label className="field">
-          <span>Your name</span>
-          <input
-            value={p.name}
-            maxLength={16}
-            placeholder="e.g. Aarav"
-            onChange={(e) => useGame.setState({ name: e.target.value.replace(/[<>]/g, "") })}
-            onKeyDown={(e) => e.key === "Enter" && p.onEnter()}
-          />
-        </label>
+        {(nav === "play" || nav === "character") && (
+          <label className="field">
+            <span>Your name</span>
+            <input
+              value={p.name}
+              maxLength={16}
+              placeholder="e.g. Aarav"
+              onChange={(e) => useGame.setState({ name: e.target.value.replace(/[<>]/g, "") })}
+              onKeyDown={(e) => e.key === "Enter" && p.onEnter()}
+            />
+          </label>
+        )}
 
-        <CityPicker cityId={p.cityId} meetId={p.meetId} stats={p.stats} />
+        {nav === "play" ? <DestinationBrowser stats={p.stats} /> : null}
+
+        {nav === "character" ? (
+          <p className="dest-hint">Use the center stage and right panel to customize body, hair, outfit, and extras.</p>
+        ) : null}
+
+        {nav === "friends" ? (
+          <div className="friends-panel">
+            <p className="dest-hint">Invite opens the same destination. Join a friend with their in-world Invite link (`?join=`).</p>
+            <div className="invite-row">
+              <button type="button" className="ghost" onClick={p.onCopy}>
+                {p.copied ? "Link copied" : "Invite friends"}
+              </button>
+              <button type="button" className="ghost" onClick={p.onWhatsApp}>
+                WhatsApp
+              </button>
+              <button type="button" className="ghost" onClick={p.onPlan}>
+                Create a meet
+              </button>
+            </div>
+            {worldPop > 0 ? (
+              <p className="plan-status">{worldPop} online right now (relay)</p>
+            ) : (
+              <p className="plan-status">No one online yet — be first, then share your invite.</p>
+            )}
+          </div>
+        ) : null}
+
+        {nav === "settings" ? <SocialToggles /> : null}
 
         {p.plan ? (
           <p className="plan-status">
@@ -98,17 +155,14 @@ export function MenuSetup(p: Props) {
 
       <div className="enter-block">
         <button className="play pulse" disabled={!p.ready} onClick={p.onEnter}>
-          {p.ready ? `Enter ${p.place}` : "Name yourself to enter"}
+          {p.ready ? "ENTER OMMO" : "Name yourself to enter"}
         </button>
         <div className="invite-row">
           <button type="button" className="ghost" onClick={p.onCopy}>
-            {p.copied ? "Link copied" : "Copy invite"}
-          </button>
-          <button type="button" className="ghost" onClick={p.onWhatsApp}>
-            WhatsApp
+            {p.copied ? "Link copied" : "Invite friends"}
           </button>
           <button type="button" className="ghost" onClick={p.onPlan}>
-            Start a plan
+            Create a meet
           </button>
         </div>
       </div>

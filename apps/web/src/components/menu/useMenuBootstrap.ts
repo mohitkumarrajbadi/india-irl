@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { applyEndowment, loadOnboard } from "@/game/onboarding";
 import { loadProfile, useGame } from "@/game/store";
+import { loadLastPlanId, saveLastPlanId } from "@/net/plans-persist";
 import { fetchPlan, fetchStats, type PlanInfo, type StatsMap } from "@/net/stats";
 import { loadVibe, touchStreak, type VibeState } from "@/game/vibe";
 import { parseDeepLink } from "@/world/meets";
@@ -29,12 +30,26 @@ export function useMenuBootstrap() {
       if (deep.meet) patch.meetId = deep.meet;
       if (deep.join) patch.joinId = deep.join;
       if (deep.plan) patch.planId = deep.plan;
+      else {
+        const last = loadLastPlanId();
+        if (last) patch.planId = last;
+      }
       if (Object.keys(patch).length) useGame.setState(patch);
-      if (deep.plan) {
-        void fetchPlan(deep.plan).then((p) => {
-          if (!p) return;
+      const planId = patch.planId ?? null;
+      if (planId) {
+        void fetchPlan(planId).then((p) => {
+          if (!p) {
+            saveLastPlanId(null);
+            return;
+          }
           setPlan(p);
-          if (!p.expired && deep.city) useGame.setState({ cityId: p.city, meetId: p.meet });
+          saveLastPlanId(p.expired ? null : p.id);
+          if (!p.expired && (deep.city || deep.plan)) {
+            const cityId = p.city === "ommo" ? "novapura" : p.city;
+            useGame.setState({ cityId, meetId: p.meet, planId: p.id });
+          } else if (!p.expired) {
+            useGame.setState({ planId: p.id });
+          }
         });
       }
     } catch {

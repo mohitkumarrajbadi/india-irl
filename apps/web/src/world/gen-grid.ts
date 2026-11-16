@@ -65,7 +65,7 @@ export function carveFringe(cfg: CityConfig, rng: Rng): Set<string> {
     [0, rows - 1],
     [cols - 1, rows - 1],
   ] as const) {
-    const depth = 1 + Math.floor(rng() * (cfg.id === "gurugram" ? 2 : 3));
+    const depth = 1 + Math.floor(rng() * (cfg.id === "udyogabad" ? 2 : 3));
     for (let d = 0; d < depth; d += 1) {
       for (let e = 0; e < depth - d; e += 1) {
         bite(ci === 0 ? d : cols - 1 - d, cj === 0 ? e : rows - 1 - e, 0.92 - d * 0.12);
@@ -73,7 +73,7 @@ export function carveFringe(cfg: CityConfig, rng: Rng): Set<string> {
       }
     }
   }
-  const notchP = cfg.id === "gurugram" ? 0.28 : cfg.id === "bengaluru" ? 0.4 : 0.48;
+  const notchP = cfg.id === "udyogabad" ? 0.28 : cfg.id === "novapura" ? 0.4 : 0.48;
   for (let i = 2; i < cols - 2; i += 1) {
     bite(i, 0, notchP);
     bite(i, rows - 1, notchP * 0.9);

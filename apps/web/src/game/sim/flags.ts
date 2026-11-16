@@ -47,3 +47,13 @@ export function isSocialV2Enabled(): boolean {
 export function isContentV2Enabled(): boolean {
   return readFeatureFlag("contentV2");
 }
+
+/** One continuous OMMO world + shared `ommo` relay room. */
+export function isWorldV1Enabled(): boolean {
+  return readFeatureFlag("worldV1");
+}
+
+/** Expand all four metros + rural corridors (requires worldV1). */
+export function isWorldFullEnabled(): boolean {
+  return isWorldV1Enabled() && readFeatureFlag("worldFull");
+}

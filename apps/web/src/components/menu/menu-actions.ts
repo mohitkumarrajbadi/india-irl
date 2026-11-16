@@ -82,6 +82,7 @@ export async function startMeetPlan(args: {
   }
   args.onPlan(p);
   useGame.setState({ planId: p.id });
+  void import("@/net/plans-persist").then(({ saveLastPlanId }) => saveLastPlanId(p.id));
   const url = inviteUrl(args.cityId, args.meetId, p.id);
   try {
     await navigator.clipboard.writeText(url);

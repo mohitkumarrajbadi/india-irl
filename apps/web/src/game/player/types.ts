@@ -20,6 +20,10 @@ export type ParkedVehicle = {
   until: number;
   /** Index into city.parked when this slot came from the world. */
   worldIndex?: number;
+  /** traffic.agents index when chassis came from ambient traffic / eject. */
+  trafficIndex?: number;
+  /** Structural HP carried across leave / remount (defaults to full). */
+  chassisHp?: number;
 };
 
 export type PlayerState = {
@@ -58,6 +62,10 @@ export type PlayerState = {
   parked: ParkedVehicle | null;
   /** city.parked index currently driven; null if none. */
   worldParkedIndex: number | null;
+  /** traffic.agents index currently driven; null if none. */
+  trafficAgentIndex: number | null;
+  /** Grace ms left before passenger drops on missing driver snaps. */
+  passengerGrace: number;
   kb: { x: number; z: number };
   coyote: number;
   stunUntil: number;

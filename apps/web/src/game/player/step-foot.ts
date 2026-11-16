@@ -1,4 +1,5 @@
 import { isCombatEmote } from "@/avatar/rig";
+import { apartmentClamp, apartmentInside } from "@/game/apartment";
 import { approachSpeed, FOOT, integrateKnockback } from "@/game/physics";
 import { runtime } from "@/game/runtime";
 import { footAuthorityStep, footAuthorityUsesWorldColliders } from "@/game/sim/foot-authority";
@@ -34,7 +35,7 @@ export function stepFoot(s: PlayerState, axes: MoveAxes, now: number, dt: number
     const moving = mag > 0.04 && !stunned;
     if (moving && s.emote !== 0 && !isCombatEmote(s.emote)) s.emote = 0;
     const pace = Math.min(1, mag);
-    const terrain = runtime.city ? sampleTerrain(runtime.city, s.x, s.z) : null;
+    const terrain = runtime.city ? sampleTerrain(runtime.city, s.x, s.z, s.y) : null;
     const groundY = terrain?.y ?? 0;
     const grounded = s.y <= groundY + 0.001;
     if (grounded) s.coyote = FOOT.coyote;
@@ -63,7 +64,7 @@ export function stepFoot(s: PlayerState, axes: MoveAxes, now: number, dt: number
     const sim = runtime.traffic;
     if (sim) {
       for (const a of sim.agents) {
-        if (a.taken) continue;
+        if (a.taken) continue; // wrecked bikes stay as foot obstacles
         const info = KIND_INFO[a.kind];
         const r = (info.len + info.wid) * 0.25 + PLAYER_RADIUS;
         const dx = nx - a.x;
@@ -76,6 +77,11 @@ export function stepFoot(s: PlayerState, axes: MoveAxes, now: number, dt: number
           s.speed *= 0.88;
         }
       }
+    }
+    if (apartmentInside()) {
+      const c = apartmentClamp(nx, nz);
+      nx = c.x;
+      nz = c.z;
     }
     s.x = nx;
     s.z = nz;
@@ -104,5 +110,10 @@ export function stepFoot(s: PlayerState, axes: MoveAxes, now: number, dt: number
     grid.resolve(s.x, s.z, PLAYER_RADIUS, resolveOut);
     s.x = resolveOut.x;
     s.z = resolveOut.z;
+  }
+  if (apartmentInside()) {
+    const c = apartmentClamp(s.x, s.z);
+    s.x = c.x;
+    s.z = c.z;
   }
 }

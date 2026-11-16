@@ -38,8 +38,13 @@ export type Agent = {
   kbX: number;
   kbZ: number;
   spin: number;
-  /** Player took this vehicle — hide + skip AI until released. */
+  /** Player currently driving — hide instance (actor mesh owns it). */
   taken: boolean;
+  /**
+   * Rider ejected / chassis left in world — visible, enterable, AI frozen.
+   * Distinct from `taken` so the bike does not sink to y=-80.
+   */
+  wrecked: boolean;
   /** Display blinker (−1 left / 0 off / 1 right). */
   blinker: -1 | 0 | 1;
   /** Junction turn intent — restored after overtake blinkers. */
@@ -52,6 +57,10 @@ export type Agent = {
   laneStrafe: number;
   /** Approach dir before junction plan (for signal cancel). */
   approachDir: number;
+  /** Exit lane index chosen at junction (applied when stage → 1). */
+  exitLane: number;
+  /** Fade-in seconds remaining after respawn (0 = fully visible). */
+  appearT: number;
 };
 
 export type Obstacle = { x: number; z: number; r: number };

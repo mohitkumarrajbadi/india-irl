@@ -15,4 +15,6 @@ export type ActorFrame = {
   y: number;
   /** Turn indicators: -1 left, 0 off, 1 right. */
   blinker?: -1 | 0 | 1;
+  /** 0 wrecked … 1 pristine — drives paint scuff / crumple. */
+  chassisHealth?: number;
 };

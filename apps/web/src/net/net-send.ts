@@ -5,6 +5,7 @@ import { isNetV2Enabled } from "@/game/sim/flags";
 import { encodePoseBase64 } from "./net-codec";
 import { addChat, useNet } from "./net-peers";
 import type { Transport } from "./transport";
+import { buildClaimMessage, type ClaimFreeExtra } from "./vehicle-claim-wire";
 
 export type Session = { city: string; name: string; look: Look };
 
@@ -13,15 +14,16 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
 export function sendJoin(transport: Transport | null, session: Session | null, reply: boolean): void {
   if (!transport || !session) return;
   const { selfId } = useNet.getState();
-  const meet = useGame.getState().meetId;
+  const { meetId, cityId } = useGame.getState();
   transport.send({
     t: "join",
     id: selfId,
     city: session.city,
+    destCity: cityId,
     name: session.name,
     look: encodeLook(session.look),
     reply,
-    meet: meet ?? 0,
+    meet: meetId ?? 0,
   });
 }
 
@@ -78,4 +80,16 @@ export function sendChat(transport: Transport | null, session: Session | null, r
 export function sendTraffic(transport: Transport | null, packed: number[]): void {
   if (!transport || packed.length < 5) return;
   transport.send({ t: "tr", p: packed });
+}
+
+/** Parked (`p`) or traffic (`t`) vehicle claim / free. Optional wreck pose on free. */
+export function sendClaim(
+  transport: Transport | null,
+  kind: "p" | "t",
+  index: number,
+  free = false,
+  extra?: ClaimFreeExtra,
+): void {
+  if (!transport) return;
+  transport.send(buildClaimMessage(kind, index, free, extra));
 }

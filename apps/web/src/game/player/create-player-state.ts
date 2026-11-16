@@ -40,6 +40,8 @@ export function createPlayerState(city: CityData): PlayerState {
     lastKind: 2,
     parked: null,
     worldParkedIndex: null,
+    trafficAgentIndex: null,
+    passengerGrace: 0,
     kb: { x: 0, z: 0 },
     coyote: 0,
     stunUntil: 0,

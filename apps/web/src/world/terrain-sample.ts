@@ -1,5 +1,6 @@
 /** Sample region / height / grade / surface at a world point. */
 import { clamp } from "../lib/math.ts";
+import { WALK } from "./gen-constants.ts";
 import { blockAt } from "./gen-query.ts";
 import { terrainProfile } from "./terrain-profile.ts";
 import { onTrailRoad } from "./trail-query.ts";
@@ -77,14 +78,18 @@ export function regionAt(city: CityData, x: number, z: number): TerrainRegion {
   }
 
   // Outer arterial corridors feel like ORR / highway
-  const nearArt =
-    Math.min(
-      ...city.roadsX.filter((r) => r.arterial).map((r) => Math.abs(x - r.c) - r.half),
-      ...city.roadsZ.filter((r) => r.arterial).map((r) => Math.abs(z - r.c) - r.half),
-    ) < 1.5;
+  let artDist = Infinity;
+  for (const r of city.roadsX) {
+    if (!r.arterial) continue;
+    artDist = Math.min(artDist, Math.abs(x - r.c) - r.half);
+  }
+  for (const r of city.roadsZ) {
+    if (!r.arterial) continue;
+    artDist = Math.min(artDist, Math.abs(z - r.c) - r.half);
+  }
   const outer =
     b.bi <= 1 || b.bj <= 1 || b.bi >= config.cols - 2 || b.bj >= config.rows - 2;
-  if (nearArt && outer) return "highway";
+  if (artDist < 1.5 && outer) return "highway";
 
   if (b.kind === "tech" || b.kind === "cbd" || b.kind === "market" || b.kind === "old") return "urban";
   return "suburban";
@@ -103,8 +108,21 @@ function surfaceFor(region: TerrainRegion, onRoad: boolean): SurfaceKind {
 }
 
 function onGridRoad(city: CityData, x: number, z: number): boolean {
-  for (const r of city.roadsX) if (Math.abs(x - r.c) <= r.half + 0.4) return true;
-  for (const r of city.roadsZ) if (Math.abs(z - r.c) <= r.half + 0.4) return true;
+  for (const r of city.roadsX) if (Math.abs(x - r.c) <= r.half + 0.55) return true;
+  for (const r of city.roadsZ) if (Math.abs(z - r.c) <= r.half + 0.55) return true;
+  return false;
+}
+
+/** Sidewalk / paver strip past the carriageway — asphalt grip, not suburban grass. */
+function onSidewalk(city: CityData, x: number, z: number): boolean {
+  for (const r of city.roadsX) {
+    const d = Math.abs(x - r.c);
+    if (d > r.half + 0.2 && d <= r.half + WALK) return true;
+  }
+  for (const r of city.roadsZ) {
+    const d = Math.abs(z - r.c);
+    if (d > r.half + 0.2 && d <= r.half + WALK) return true;
+  }
   return false;
 }
 
@@ -146,12 +164,56 @@ export function heightAt(city: CityData, x: number, z: number): number {
   return ridge * prof.hillRise * (0.55 + n * 0.7) + fringe;
 }
 
-function onFlyover(city: CityData, x: number, z: number): number | null {
+/** Metres along span used for approach ramps (also mirrored at far end). */
+const FLYOVER_RAMP = 22;
+/** Stay on deck when yHint is at least this (below → drive under). */
+const FLYOVER_DECK_KEEP = 2.6;
+
+/**
+ * Flyover surface height, or null for ground under the deck.
+ * Mid-span is dual-level: ramps always rise; deck needs yHint (current player Y).
+ */
+export function flyoverHeightAt(city: CityData, x: number, z: number, yHint?: number): number | null {
   const fo = city.flyover;
   if (!fo) return null;
   if (z < fo.z0 || z > fo.z1) return null;
   if (Math.abs(x - fo.x) > fo.half) return null;
-  return fo.deckY + 0.3;
+
+  const deck = fo.deckY + 0.3;
+  const span = fo.z1 - fo.z0;
+  const ramp = Math.min(FLYOVER_RAMP, span * 0.28);
+  const along = z - fo.z0;
+
+  if (along < ramp) return (along / ramp) * deck;
+  if (along > span - ramp) return ((fo.z1 - z) / ramp) * deck;
+
+  // Mid span — under at ground, on deck when already elevated (ramp / prior frame)
+  if (yHint != null && yHint >= FLYOVER_DECK_KEEP) return deck;
+  return null;
+}
+
+const UNDER_RAMP = 14;
+
+/** Road surface Y inside an underpass trough (negative mid-span), else null. */
+export function underpassHeightAt(city: CityData, x: number, z: number): number | null {
+  const u = city.underpass;
+  if (!u) return null;
+  const span = u.a1 - u.a0;
+  const ramp = Math.min(UNDER_RAMP, span * 0.28);
+  if (u.axis === "x") {
+    if (Math.abs(z - u.c) > u.half) return null;
+    if (x < u.a0 || x > u.a1) return null;
+    const along = x - u.a0;
+    if (along < ramp) return (along / ramp) * u.floorY;
+    if (along > span - ramp) return ((u.a1 - x) / ramp) * u.floorY;
+    return u.floorY;
+  }
+  if (Math.abs(x - u.c) > u.half) return null;
+  if (z < u.a0 || z > u.a1) return null;
+  const along = z - u.a0;
+  if (along < ramp) return (along / ramp) * u.floorY;
+  if (along > span - ramp) return ((u.a1 - z) / ramp) * u.floorY;
+  return u.floorY;
 }
 
 function apronPad(city: CityData, x: number, z: number): number {
@@ -164,16 +226,35 @@ function apronPad(city: CityData, x: number, z: number): number {
   return pad;
 }
 
-export function sampleTerrain(city: CityData, x: number, z: number): TerrainSample {
+export function sampleTerrain(city: CityData, x: number, z: number, yHint?: number): TerrainSample {
   const eps = 1.6;
   const trail = onTrailRoad(city, x, z);
-  const flyY = onFlyover(city, x, z);
+  const flyY = flyoverHeightAt(city, x, z, yHint);
+  const underY = flyY == null ? underpassHeightAt(city, x, z) : null;
   const base = heightAt(city, x, z);
-  const y = flyY ?? base + (trail ? (trail.trail.kind === "hill" ? 0.08 : 0.05) : 0);
+  const y =
+    flyY ??
+    underY ??
+    base + (trail ? (trail.trail.kind === "hill" ? 0.08 : 0.05) : 0);
   // Flat urban core — skip two extra noise samples every drive/foot tick
   let gradX = 0;
   let gradZ = 0;
-  if (flyY == null && (apronPad(city, x, z) > 0.5 || trail)) {
+  if (flyY != null) {
+    const y0 = flyoverHeightAt(city, x, z - eps, yHint) ?? base;
+    const y1 = flyoverHeightAt(city, x, z + eps, yHint) ?? base;
+    gradZ = (y1 - y0) / (eps * 2);
+  } else if (underY != null) {
+    const u = city.underpass!;
+    if (u.axis === "x") {
+      const y0 = underpassHeightAt(city, x - eps, z) ?? base;
+      const y1 = underpassHeightAt(city, x + eps, z) ?? base;
+      gradX = (y1 - y0) / (eps * 2);
+    } else {
+      const y0 = underpassHeightAt(city, x, z - eps) ?? base;
+      const y1 = underpassHeightAt(city, x, z + eps) ?? base;
+      gradZ = (y1 - y0) / (eps * 2);
+    }
+  } else if (apronPad(city, x, z) > 0.5 || trail) {
     const yx = heightAt(city, x + eps, z);
     const yz = heightAt(city, x, z + eps);
     gradX = (yx - base) / eps;
@@ -182,15 +263,20 @@ export function sampleTerrain(city: CityData, x: number, z: number): TerrainSamp
   let region = regionAt(city, x, z);
   if (trail?.trail.kind === "hill") region = "hills";
   else if (trail?.trail.kind === "village") region = "village";
-  const road = flyY != null || !!trail || onGridRoad(city, x, z);
+  const carriage = flyY != null || underY != null || !!trail || onGridRoad(city, x, z);
+  const sidewalk = !carriage && onSidewalk(city, x, z);
+  const road = carriage || sidewalk;
   let surface = surfaceFor(region, road);
+  if (sidewalk) surface = "asphalt";
   if (trail?.trail.kind === "village") surface = trail.trail.half < 1.7 ? "gravel" : "dirt";
   if (trail?.trail.kind === "hill") surface = "asphalt";
-  if (flyY != null) surface = "asphalt";
+  if (flyY != null || underY != null) surface = "asphalt";
   let grip = GRIP[surface];
   if (region === "hills" && Math.hypot(gradX, gradZ) > 0.12) grip *= 0.85;
   if (trail?.trail.kind === "hill") grip *= 0.92;
-  if (region === "highway" && road && !trail && flyY == null) grip = Math.min(1.08, grip * 1.05);
+  if (underY != null) grip *= 0.94;
+  if (sidewalk) grip *= 0.96;
+  if (region === "highway" && carriage && !trail && flyY == null) grip = Math.min(1.08, grip * 1.05);
   // Heavy vehicles feel grades more — caller can scale; keep base grade strong on hills
   return { y, gradX, gradZ, region, surface, grip };
 }

@@ -1,4 +1,4 @@
-export type CityId = "bengaluru" | "pune" | "hyderabad" | "gurugram";
+export type CityId = "novapura" | "mandipura" | "neerabad" | "udyogabad";
 
 export type DistrictKind = "tech" | "cbd" | "resi" | "market" | "old" | "park";
 

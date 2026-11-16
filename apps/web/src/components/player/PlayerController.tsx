@@ -86,24 +86,26 @@ export function PlayerController({ city, name, look }: Props) {
       <primitive object={actor.group} />
       <group ref={lights} visible={false}>
         <spotLight
-          position={[0.45, 0.2, 1.4]}
-          angle={0.5}
-          penumbra={0.7}
-          distance={60}
-          decay={1.4}
-          color="#fff2d0"
+          position={[0.45, 0.35, 1.5]}
+          angle={0.48}
+          penumbra={0.65}
+          distance={48}
+          decay={1.35}
+          intensity={0}
+          color="#fff1c8"
           target={lightTarget}
         />
         <spotLight
-          position={[-0.45, 0.2, 1.4]}
-          angle={0.5}
-          penumbra={0.7}
-          distance={60}
-          decay={1.4}
-          color="#fff2d0"
+          position={[-0.45, 0.35, 1.5]}
+          angle={0.48}
+          penumbra={0.65}
+          distance={48}
+          decay={1.35}
+          intensity={0}
+          color="#fff1c8"
           target={lightTarget}
         />
-        <primitive object={lightTarget} position={[0, -0.3, 18]} />
+        <primitive object={lightTarget} position={[0, -1.2, 22]} />
       </group>
     </>
   );

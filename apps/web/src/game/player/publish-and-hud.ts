@@ -1,6 +1,8 @@
 /** Net publish, social mission, 4 Hz HUD. */
 import type { ActorFrame } from "@/avatar/actor";
 import { live } from "@/game/runtime";
+import { convoyActive, convoyIsHost, convoyMarkerBearing } from "@/game/social/convoy";
+import { driveProfileHudLine } from "@/game/sim/drive-profile";
 import { grantMission, reportHudFps, useGame, type Hud } from "@/game/store";
 import { env } from "@/gfx/env";
 import { sendIntervalSec } from "@/net/interest";
@@ -50,7 +52,7 @@ export function publishLive(
   }
 }
 
-export function tickSocialAndJobs(s: PlayerState, peerMap: Map<string, Peer>): void {
+export function tickSocialMissions(s: PlayerState, peerMap: Map<string, Peer>): void {
   if (s.hangDone || peerMap.size === 0) return;
   let near = false;
   peerMap.forEach((p) => {
@@ -68,6 +70,17 @@ export function syncHud(s: PlayerState, city: CityData, peerMap: Map<string, Pee
   if (s.sample < 0.25) return;
   const fps = Math.round(s.frames / s.sample);
   const deg = ((((-s.camYaw * 180) / Math.PI) % 360) + 360) % 360;
+  const driveLine = driveProfileHudLine();
+  let convoyLine = "";
+  if (convoyActive()) {
+    const m = convoyMarkerBearing(s.x, s.z, live.yaw);
+    const role = convoyIsHost() ? "Host" : "Convoy";
+    if (!m) convoyLine = `${role} · C regroup · Shift+C leave`;
+    else {
+      const arrow = Math.abs(m.bearingDeg) < 25 ? "↑" : m.bearingDeg > 0 ? "↗" : "↖";
+      convoyLine = `${role} ${arrow} ${Math.round(m.dist)}m · ${m.label}`;
+    }
+  }
   const hud: Hud = {
     fps,
     x: s.x,
@@ -80,6 +93,8 @@ export function syncHud(s: PlayerState, city: CityData, peerMap: Map<string, Pee
     prompt: contextualPrompt(s, city, peerMap),
     hour: env.hour,
     hp: Math.round(s.hp),
+    ...(driveLine ? { driveProfile: driveLine } : {}),
+    ...(convoyLine ? { convoy: convoyLine } : {}),
   };
   useGame.setState({ hud });
   reportHudFps(fps);

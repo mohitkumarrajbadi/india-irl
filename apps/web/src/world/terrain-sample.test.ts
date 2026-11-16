@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
-import { bengaluru } from "./city-bengaluru.ts";
+import { novapura } from "./city-novapura.ts";
 import { generateCity } from "./generate.ts";
 import { forwardGrade, heightAt, regionAt, sampleTerrain } from "./terrain-sample.ts";
 import { terrainProfile } from "./terrain-profile.ts";
 import { driveGrade } from "./terrain-drive.ts";
 
-const city = generateCity(bengaluru);
-const prof = terrainProfile("bengaluru");
+const city = generateCity(novapura);
+const prof = terrainProfile("novapura");
 assert.ok(prof.hillRise > 30);
 
 const midX = (city.bounds.minX + city.bounds.maxX) * 0.5;

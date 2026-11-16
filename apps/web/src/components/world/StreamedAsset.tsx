@@ -14,7 +14,7 @@ type Props = { asset: StreamAsset };
 function cellOrigin(cx: number, cz: number): [number, number, number] {
   const x = cx * CHUNK_SIZE + CHUNK_SIZE / 2;
   const z = cz * CHUNK_SIZE + CHUNK_SIZE / 2;
-  return [x, roadSurfaceY(x, z), z];
+  return [x, roadSurfaceY(null, x, z), z];
 }
 
 export function StreamedAsset({ asset }: Props) {

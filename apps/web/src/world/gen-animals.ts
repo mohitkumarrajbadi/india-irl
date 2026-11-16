@@ -25,8 +25,8 @@ export function spawnAnimals(g: GenBuffers): void {
     const id = cfg.id;
     const pool = blocks.filter((b) => {
       if (b.fringe) return false;
-      if (id === "bengaluru" || id === "gurugram") return b.kind === "tech" || b.kind === "cbd" || b.kind === "market";
-      if (id === "pune") return b.kind === "resi" || b.kind === "market" || b.kind === "old";
+      if (id === "novapura" || id === "udyogabad") return b.kind === "tech" || b.kind === "cbd" || b.kind === "market";
+      if (id === "mandipura") return b.kind === "resi" || b.kind === "market" || b.kind === "old";
       return b.kind === "market" || b.kind === "old" || b.kind === "cbd";
     });
     const b = pool.length > 0 ? pick(rng, pool) : blocks[0]!;

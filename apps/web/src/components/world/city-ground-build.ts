@@ -22,7 +22,7 @@ export function buildCityGround(city: CityData) {
   const lot = new QuadBatch();
   const grass = new QuadBatch();
   // Hair above collider Y=0 so asphalt doesn't z-fight the trimesh
-  const Y = 0.015;
+  const Y = 0.02;
 
   // N–S road strips between junctions (u across width, v along length)
   for (let i = 0; i <= cols; i += 1) {
@@ -82,15 +82,17 @@ function paintCrossings(
 ): void {
   const { xs, zs, roadsX, roadsZ, config } = city;
   const { cols, rows } = config;
-  const zY = Y + 0.006;
-  const mY = Y + 0.005;
+  // Distinct heights + polygonOffset on mats — no z-fight flicker with carriageway
+  const zY = Y + 0.012;
+  const mY = Y + 0.008;
 
   const stripes = (x0: number, z0: number, x1: number, z1: number, alongX: boolean) => {
     const span = alongX ? x1 - x0 : z1 - z0;
     if (span < 0.4) return;
+    // ~0.55 m bar pitch so mipmaps keep stripe contrast
     zebra.quad(x0, z0, x1, z1, zY, {
       u0: 0,
-      u1: span / 14,
+      u1: span / 5.5,
       v0: 0,
       v1: 1,
       swap: !alongX,

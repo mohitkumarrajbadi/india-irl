@@ -30,7 +30,7 @@ When `?rapierDrive=1` (or localStorage), **drive mode** integrates via the sim w
 
 ```
 GameCanvas mount (flag on) → ensureDriveWorker (warm)
-summon / remount  → driveAuthority.enter(kind, pose)
+enter / remount   → driveAuthority.enter(kind, pose)
 useFrame drive    → syncWorldChunks → setInput → apply snapshot
                   → takeDriveImpact → applyCrashHit (optional)
                   → skip arcade grid.resolve when chunks resident
@@ -49,6 +49,14 @@ If worker not ready or kind not in allow-list → fall back to `stepDrive`.
 ## Allow-list
 
 All player vehicles: auto (1), scooter (2), cab (3).
+
+## Drive profiler
+
+| Flag | Behavior |
+| --- | --- |
+| `driveProfile` | HUD line: authority · mean/p95 ms · fallback% · chunk count · PASS/HOLD |
+
+Budgets in `drive-profile.ts` (`DRIVE_BUDGET`): Rapier p95 ≤ 2.8 ms, fallback ≤ 8%, ≥ 45 samples. Arcade stays default until a sustained **PASS**.
 
 ## Constraints
 

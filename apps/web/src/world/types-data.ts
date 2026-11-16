@@ -78,6 +78,30 @@ export type Flyover = {
   pillars: { x: number; z: number }[];
 };
 
+/**
+ * Dipped arterial underpass — travel along `axis`, road centreline at `c`.
+ * Floor sits below grade; crossing road stays at ground level overhead.
+ */
+export type Underpass = {
+  axis: "x" | "z";
+  c: number;
+  half: number;
+  a0: number;
+  a1: number;
+  floorY: number;
+  crossC: number;
+  crossHalf: number;
+};
+
+/** Compact rural cluster outside the urban grid. */
+export type VillageSettlement = {
+  x: number;
+  z: number;
+  yaw: number;
+  label: string;
+  huts: { x: number; z: number; w: number; d: number; h: number; rot: number; color: number }[];
+};
+
 export type Prop = { x: number; z: number; rot: number; s: number; v: number };
 
 export type CityData = {
@@ -113,6 +137,10 @@ export type CityData = {
   trails: TrailRoad[];
   /** Optional elevated arterial; null if city has no suitable span. */
   flyover: Flyover | null;
+  /** Optional dipped underpass; null if no suitable crossing. */
+  underpass: Underpass | null;
+  /** Rural hamlets along village trails. */
+  villages: VillageSettlement[];
   bounds: Rect;
   spawn: { x: number; z: number; yaw: number };
 };

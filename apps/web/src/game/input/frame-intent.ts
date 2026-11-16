@@ -9,6 +9,10 @@ export type FrameAxes = {
   jump: boolean;
   /** Current signed chassis speed — used for brake-vs-reverse. */
   speed?: number;
+  /** Terrain × weather grip (1 = dry asphalt). */
+  gripMul?: number;
+  /** Chassis health 0…1 — scales Rapier drive force. */
+  health?: number;
 };
 
 const actions: number[] = [];
@@ -32,6 +36,8 @@ export function simInputFromDriveAxes(a: FrameAxes): SimInput {
     sprint: a.sprint,
     jump: false,
     interact: false,
+    gripMul: a.gripMul ?? 1,
+    health: a.health ?? 1,
     actions,
   };
 }

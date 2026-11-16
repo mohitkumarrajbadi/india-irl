@@ -3,7 +3,8 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import { env, gameHour, updateEnv } from "@/gfx/env";
+import { fogDensity } from "@/gfx/atmosphere-fx";
+import { applyTimeQuery, env, gameHour, updateEnv } from "@/gfx/env";
 import { makeHillGeometry, makeSkyMaterial } from "@/gfx/materials";
 import { quality } from "@/game/quality";
 import { live } from "@/game/runtime";
@@ -13,7 +14,7 @@ import type { CityConfig } from "@/world/types";
 
 /** Sky dome, horizon hills, fog, and the sun/moon rig. Everything reads one `env` struct. */
 export function Atmosphere({ config }: { config: CityConfig }) {
-  const { scene, camera } = useThree();
+  const { scene, camera, gl } = useThree();
   const sky = useRef<THREE.Mesh>(null);
   const hills = useRef<THREE.Mesh>(null);
   const sun = useRef<THREE.DirectionalLight>(null);
@@ -23,6 +24,7 @@ export function Atmosphere({ config }: { config: CityConfig }) {
   const haze = useMemo(() => new THREE.Color(config.skyline.haze), [config]);
   const hillTint = useMemo(() => new THREE.Color(config.skyline.hillColor), [config]);
   const rainFog = useMemo(() => new THREE.Color("#8a9aaa"), []);
+  const mistFog = useMemo(() => new THREE.Color("#9aa8b8"), []);
 
   const skyMat = useMemo(() => makeSkyMaterial(), []);
   const hillGeo = useMemo(() => {
@@ -32,6 +34,7 @@ export function Atmosphere({ config }: { config: CityConfig }) {
   const hillMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#789", side: THREE.BackSide, fog: false }), []);
 
   useEffect(() => {
+    applyTimeQuery();
     scene.fog = new THREE.FogExp2(0xaabbcc, quality.active.fogDensity);
     return () => {
       scene.fog = null;
@@ -51,8 +54,11 @@ export function Atmosphere({ config }: { config: CityConfig }) {
 
     if (scene.fog) {
       const fog = scene.fog as THREE.FogExp2;
-      fog.color.copy(e.fog).lerp(rainFog, weather.fog * 0.55);
-      fog.density = q.fogDensity * (1 + weather.fog * 2.4 + weather.rain * 0.6);
+      fog.color
+        .copy(e.fog)
+        .lerp(rainFog, weather.fog * 0.45 + weather.rain * 0.2)
+        .lerp(mistFog, weather.wet * 0.25);
+      fog.density = fogDensity(q.fogDensity, weather.fog, weather.rain, weather.wet);
     }
     sky.current?.position.copy(camera.position);
     if (hills.current) {
@@ -93,6 +99,8 @@ export function Atmosphere({ config }: { config: CityConfig }) {
       hemi.current.intensity = e.hemiIntensity;
     }
     if (ambient.current) ambient.current.intensity = e.ambient;
+    // Tiny night exposure lift — roads stay readable without washing daytime
+    gl.toneMappingExposure = 1.02 + e.night * 0.1 + e.twilight * 0.04;
   });
 
   return (

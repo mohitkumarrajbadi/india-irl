@@ -7,12 +7,13 @@ import { GeoBuilder, vertexMat } from "@/gfx/geo";
 import { makeInstanced } from "@/gfx/instancing";
 import { quality } from "@/game/quality";
 import { live, runtime } from "@/game/runtime";
+import { useGame } from "@/game/store";
 import { env } from "@/gfx/env";
 import { BOTTOM_COLORS, SKIN_TONES, TOP_COLORS } from "@/avatar/appearance";
 import { PedestrianSim } from "@/world/pedestrians";
 import type { CityData } from "@/world/types";
 
-const PED_COUNTS = { low: 36, medium: 56, high: 84 } as const;
+const PED_COUNTS = { low: 14, medium: 22, high: 32 } as const;
 
 /**
  * Soft chibi sidewalk figure — closer to player avatar proportions than a
@@ -35,7 +36,10 @@ function pedGeometry(): THREE.BufferGeometry {
 
 /** Instanced sidewalk crowd. Seeded per city so every client sees the same walkers. */
 export function Pedestrians({ city }: { city: CityData }) {
-  const count = PED_COUNTS[quality.active.id];
+  // Prefer preference over auto-tier so demote/promote doesn't remount the crowd
+  const qualityId = useGame((s) => s.qualityId);
+  const tier = qualityId === "auto" ? "medium" : qualityId;
+  const count = PED_COUNTS[tier];
   const set = useMemo(() => {
     const sim = new PedestrianSim(city, count);
     const geo = pedGeometry();

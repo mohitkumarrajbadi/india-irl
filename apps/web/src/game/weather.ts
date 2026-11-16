@@ -81,7 +81,7 @@ export function tickWeather(dt: number, hour: number, cityId: string, auto = tru
   if (autoAcc < 45 + Math.random() * 40) return;
   autoAcc = 0;
   // Monsoon-ish cities: more afternoon showers
-  const monsoon = cityId === "bengaluru" || cityId === "pune" || cityId === "hyderabad";
+  const monsoon = cityId === "novapura" || cityId === "mandipura" || cityId === "neerabad";
   const aft = hour >= 14 && hour <= 19;
   if (weather.id === "clear" && monsoon && aft && Math.random() < 0.45) {
     setWeather(Math.random() < 0.55 ? "drizzle" : "haze");

@@ -2,9 +2,9 @@
  * Local engagement loop: streak, XP, titles, daily missions.
  * Designed for habit + identity investment without a server.
  */
-export type { Award, LevelInfo, MissionId, VibeState } from "./vibe-types";
-export { MISSIONS } from "./vibe-types";
-export { istDay, loadVibe, saveVibe } from "./vibe-persist";
+export type { Award, LevelInfo, MissionId, VibeState } from "./vibe-types.ts";
+export { MISSIONS } from "./vibe-types.ts";
+export { istDay, loadVibe, saveVibe } from "./vibe-persist.ts";
 export {
   awardXp,
   buzzLabel,
@@ -15,4 +15,4 @@ export {
   noteSession,
   touchStreak,
   xpForLevel,
-} from "./vibe-xp";
+} from "./vibe-xp.ts";

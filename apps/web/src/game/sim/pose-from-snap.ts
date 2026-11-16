@@ -3,6 +3,7 @@ import type { SnapshotEntity } from "@india-irl/engine";
 
 export type DrivePose = {
   x: number;
+  y: number;
   z: number;
   yaw: number;
   speed: number;
@@ -15,7 +16,7 @@ export function poseFromSnap(e: SnapshotEntity): DrivePose {
   const sinr = 2 * (qw * qx + qy * qz);
   const cosr = 1 - 2 * (qx * qx + qy * qy);
   const roll = Math.atan2(sinr, cosr);
-  return { x: e.x, z: e.z, yaw, speed: e.speed, roll };
+  return { x: e.x, y: e.y, z: e.z, yaw, speed: e.speed, roll };
 }
 
 export function applyPoseToDrive(

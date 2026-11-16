@@ -37,12 +37,15 @@ function stubAgent(partial: Partial<Agent>): Agent {
     kbZ: 0,
     spin: 0,
     taken: false,
+    wrecked: false,
     blinker: 0,
     turnBlinker: 0,
     braking: false,
     laneTimer: 0,
     laneStrafe: 0,
     approachDir: 0,
+    exitLane: 0,
+    appearT: 0,
     ...partial,
   };
 }
@@ -55,17 +58,47 @@ assert.equal(forwardBlocked(self, [self], 0, [{ x: 0, z: 4, r: 1.2 }], 12), true
 
 assert.equal(sideClear(self, [self, stubAgent({ x: 2.2, z: 2, yaw: 0 })], 0, 1), false);
 assert.equal(sideClear(self, [self, stubAgent({ x: -2.2, z: 2, yaw: 0 })], 0, 1), true);
+// Wrecked chassis blocks side corridor (do not strafe through remountable bikes).
+assert.equal(
+  sideClear(self, [self, stubAgent({ x: 2.2, z: 2, yaw: 0, wrecked: true, speed: 0 })], 0, 1),
+  false,
+);
 
-const city = {
+// Bipolar lanes — right overtake = higher index / positive offset.
+const cityBi = {
   roadsX: [{ lanes: [-1.75, 1.75], half: 4 }],
   roadsZ: [{ lanes: [-1.75, 1.75], half: 4 }],
 } as Parameters<typeof pickLaneChange>[0];
 const blocked = stubAgent({ x: 0, z: 0, yaw: 0, speed: 8, lane: 0, approachDir: 0, dir: 0, ni: 0, nj: 1 });
 const blocker = stubAgent({ x: 0, z: 4, yaw: 0, speed: 0 });
-const change = pickLaneChange(city, blocked, [blocked, blocker], 0, []);
+const change = pickLaneChange(cityBi, blocked, [blocked, blocker], 0, []);
 assert.ok(change);
-assert.equal(change!.blinker, 1); // prefer right overtake
+assert.equal(change!.blinker, 1);
 assert.equal(change!.lane, 1);
+assert.equal(change!.strafe, 1);
+
+// Production LHT arterials — overtake toward median = lower index (less negative).
+const cityLht = {
+  roadsX: [{ lanes: [-2.6, -5.8, -9.0], half: 11 }],
+  roadsZ: [{ lanes: [-2.6, -5.8, -9.0], half: 11 }],
+} as Parameters<typeof pickLaneChange>[0];
+const curb = stubAgent({
+  x: 0,
+  z: 0,
+  yaw: 0,
+  speed: 8,
+  lane: 2,
+  approachDir: 0,
+  dir: 0,
+  ni: 0,
+  nj: 1,
+});
+const curbBlock = stubAgent({ x: 0, z: 4, yaw: 0, speed: 0 });
+const lht = pickLaneChange(cityLht, curb, [curb, curbBlock], 0, []);
+assert.ok(lht);
+assert.equal(lht!.lane, 1); // toward median
+assert.equal(lht!.blinker, 1); // right
+assert.equal(lht!.strafe, 1); // local +X = more positive offset
 
 const ps = {
   blinker: -1 as const,

@@ -5,6 +5,7 @@ import { clearTrafficHandler, onMessage, setTrafficHandler } from "./net-message
 import { newId, refreshIds, useNet } from "./net-peers";
 import {
   sendChat as sendChatRaw,
+  sendClaim as sendClaimRaw,
   sendHit as sendHitRaw,
   sendHonk as sendHonkRaw,
   sendJoin,
@@ -14,6 +15,10 @@ import {
   type Session,
 } from "./net-send";
 import { openTransport, type Transport } from "./transport";
+import { resetApartment, setApartmentSender } from "@/game/apartment";
+import { resetConvoy, setConvoySender } from "@/game/social/convoy";
+import { setBreakSender } from "./destructible-breaks";
+import { setClaimSender } from "./vehicle-claims";
 import { setVoiceModeSender, voice } from "./voice";
 
 export type { ChatLine, NetStatus, Peer } from "./net-types";
@@ -47,16 +52,26 @@ export function connect(city: string, name: string, look: Look): void {
       voice.setSender(selfId, (msg) => transport?.send(msg));
       setVoiceModeSender(sendVoiceMode);
       setCardSender((msg) => transport?.send(msg));
+      setClaimSender((msg) => transport?.send(msg));
+      setBreakSender((msg) => transport?.send(msg));
+      setConvoySender((msg) => transport?.send(msg), selfId);
+      setApartmentSender((msg) => transport?.send(msg), selfId);
       join(false);
     },
     close: () => {
       voice.disable();
+      resetConvoy();
+      resetApartment();
       useNet.getState().peerMap.clear();
       useNet.setState({ status: "reconnecting", peerIds: [] });
     },
   });
   voice.setSender(selfId, (msg) => transport?.send(msg));
   setVoiceModeSender(sendVoiceMode);
+  setClaimSender((msg) => transport?.send(msg));
+  setBreakSender((msg) => transport?.send(msg));
+  setConvoySender((msg) => transport?.send(msg), selfId);
+  setApartmentSender((msg) => transport?.send(msg), selfId);
 
   sweep = setInterval(() => {
     const { peerMap } = useNet.getState();
@@ -79,6 +94,8 @@ export function connect(city: string, name: string, look: Look): void {
 export function disconnect(): void {
   window.removeEventListener("pagehide", disconnect);
   voice.disable();
+  resetConvoy();
+  resetApartment();
   clearTrafficHandler();
   if (transport) {
     const { selfId } = useNet.getState();
@@ -114,4 +131,14 @@ export function sendChat(raw: string): void {
 /** Sparse traffic host snapshot: flat [index,x,z,yaw,speed, …]. */
 export function sendTraffic(packed: number[]): void {
   sendTrafficRaw(transport, packed);
+}
+
+/** Claim or free a parked (`p`) / traffic (`t`) vehicle for peers. */
+export function sendClaim(
+  kind: "p" | "t",
+  index: number,
+  free = false,
+  extra?: { wreck?: boolean; x?: number; z?: number; yaw?: number },
+): void {
+  sendClaimRaw(transport, kind, index, free, extra);
 }

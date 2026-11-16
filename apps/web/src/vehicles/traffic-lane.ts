@@ -19,8 +19,8 @@ export function forwardBlocked(
   const cos = Math.cos(a.yaw);
   for (let m = 0; m < agents.length; m += 1) {
     if (m === selfIndex) continue;
-    const o = agents[m];
-    if (o.taken || o.ghost > 0) continue;
+    const o = agents[m]!;
+    if (o.taken || o.wrecked || o.ghost > 0) continue;
     const rx = o.x - a.x;
     const rz = o.z - a.z;
     const along = rx * sin + rz * cos;
@@ -52,10 +52,11 @@ export function sideClear(
   const info = KIND_INFO[a.kind];
   const sin = Math.sin(a.yaw);
   const cos = Math.cos(a.yaw);
-  const side = dirSign; // local +X
+  const side = dirSign;
   for (let m = 0; m < agents.length; m += 1) {
     if (m === selfIndex) continue;
-    const o = agents[m];
+    const o = agents[m]!;
+    // Wrecked bikes still block overtakes (taken stays skipped — player-driven).
     if (o.taken) continue;
     const rx = o.x - a.x;
     const rz = o.z - a.z;
@@ -70,7 +71,11 @@ export function sideClear(
 
 export type LaneChange = { lane: number; strafe: number; blinker: -1 | 0 | 1 };
 
-/** Pick an adjacent lane for overtake, or null. */
+/**
+ * Pick an adjacent lane for overtake, or null.
+ * Strafe / blinker derived from lane offset delta: more positive offset = local +X = right
+ * (works for LHT all-negative arterials and bipolar test lanes).
+ */
 export function pickLaneChange(
   city: CityData,
   a: Agent,
@@ -78,25 +83,30 @@ export function pickLaneChange(
   selfIndex: number,
   obstacles: readonly Obstacle[],
 ): LaneChange | null {
-  if (a.laneTimer > 0 || a.kind >= 3) return null; // buses/trucks stay put
+  if (a.laneTimer > 0 || a.kind >= 3) return null;
   if (!forwardBlocked(a, agents, selfIndex, obstacles, 8 + a.speed)) return null;
   const travel = a.stage === 0 ? a.approachDir : a.dir;
-  const bi = a.ni - DX[travel];
-  const bj = a.nj - DZ[travel];
+  const bi = a.ni - DX[travel]!;
+  const bj = a.nj - DZ[travel]!;
   const road = roadAlong(city, bi, bj, travel);
   const lanes = road.lanes.length > 0 ? road.lanes : roadAlong(city, a.ni, a.nj, a.dir).lanes;
   if (lanes.length < 2) return null;
 
-  const tryLane = (next: number, blinker: -1 | 0 | 1, strafe: number): LaneChange | null => {
-    if (next < 0 || next >= lanes.length) return null;
-    if (!sideClear(a, agents, selfIndex, strafe)) return null;
-    return { lane: next, strafe, blinker };
-  };
+  const curOff = lanes[Math.min(a.lane, lanes.length - 1)]!;
+  type Cand = { lane: number; dOff: number };
+  const cands: Cand[] = [];
+  for (const next of [a.lane - 1, a.lane + 1]) {
+    if (next < 0 || next >= lanes.length) continue;
+    cands.push({ lane: next, dOff: lanes[next]! - curOff });
+  }
+  // Prefer overtaking to the right (positive offset delta / local +X) — India LHT.
+  cands.sort((a, b) => b.dOff - a.dOff);
 
-  // Prefer overtaking to the right in India (keep-left traffic → pass on right).
-  return (
-    tryLane(a.lane + 1, 1, -1) ||
-    tryLane(a.lane - 1, -1, 1) ||
-    null
-  );
+  for (const c of cands) {
+    const strafe = c.dOff >= 0 ? 1 : -1;
+    const blinker = (strafe > 0 ? 1 : -1) as -1 | 1;
+    if (!sideClear(a, agents, selfIndex, strafe)) continue;
+    return { lane: c.lane, strafe, blinker };
+  }
+  return null;
 }

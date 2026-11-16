@@ -73,7 +73,7 @@ function appendRibbon(
   }
 }
 
-/** Low guardrail quads on the downhill/outer side of hill roads. */
+/** Low guardrail quads on the outer side of hill roads (+ posts on bends). */
 function appendRails(
   pos: number[],
   uv: number[],
@@ -86,20 +86,19 @@ function appendRails(
   const rail = new THREE.Color("#8a9098");
   const pts = trail.points;
   const ys = smoothHeights(pts.map((p) => heightAt(city, p.x, p.z)));
-  for (let i = 0; i < pts.length - 1; i += 2) {
+  for (let i = 0; i < pts.length - 1; i += 1) {
     const a = pts[i]!;
-    const b = pts[Math.min(i + 1, pts.length - 1)]!;
+    const b = pts[i + 1]!;
     const dx = b.x - a.x;
     const dz = b.z - a.z;
     const len = Math.hypot(dx, dz) || 1;
     const nx = -dz / len;
     const nz = dx / len;
-    // Outer rail (positive lateral)
     const d = trail.half + 0.35;
     const y0 = ys[i]! + 0.55;
-    const y1 = ys[Math.min(i + 1, ys.length - 1)]! + 0.55;
+    const y1 = ys[i + 1]! + 0.55;
     const base = pos.length / 3;
-    const h = 0.45;
+    const h = 0.55;
     pos.push(
       a.x + nx * d, y0, a.z + nz * d,
       a.x + nx * d, y0 + h, a.z + nz * d,

@@ -112,26 +112,59 @@ export function PreviewCanvas({
   }, [ui.accent]);
   return (
     <Canvas
-      dpr={[1, 2]}
-      shadows
+      key={`preview-${cityId}`}
+      dpr={1}
+      frameloop="always"
+      flat
       camera={{ fov: 28, position: [0, 1.15, 3.35], near: 0.1, far: 30 }}
-      gl={{ antialias: true, alpha: false }}
-      onCreated={({ camera, gl }) => {
-        camera.lookAt(0, 1.05, 0);
-        gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.2;
+      gl={{
+        antialias: true,
+        alpha: false,
+        powerPreference: "default",
+        failIfMajorPerformanceCaveat: false,
       }}
+      onCreated={({ camera, gl, scene }) => {
+        camera.lookAt(0, 1.05, 0);
+        const sky = "#1c2838";
+        gl.setClearColor(sky, 1);
+        scene.background = new THREE.Color(sky);
+        scene.fog = new THREE.FogExp2(sky, 0.045);
+        gl.toneMapping = THREE.ACESFilmicToneMapping;
+        gl.toneMappingExposure = 1.22;
+        gl.domElement.style.background = sky;
+      }}
+      style={{ background: "#1c2838" }}
+      shadows
     >
-      <color attach="background" args={["#1a4f9c"]} />
-      <hemisphereLight args={["#fff8f0", "#3a6fb5", 0.75]} />
-      <directionalLight position={[2.2, 4.8, 3.2]} intensity={2.1} castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024} />
-      <directionalLight position={[-2.8, 2.4, -1.5]} intensity={0.7} color="#a8c8ff" />
-      <directionalLight position={[0.2, 1.8, 3.5]} intensity={0.65} color="#ffe4c8" />
-      <directionalLight position={[-1.5, 3.2, -3.5]} intensity={1.25} color="#d0e4ff" />
-      <mesh rotation-x={-Math.PI / 2} receiveShadow position={[0, -0.005, 0]}>
-        <circleGeometry args={[1.45, 64]} />
-        <meshStandardMaterial color={floor} roughness={0.72} metalness={0.08} />
+      <hemisphereLight args={["#ffe8d0", "#1a3048", 0.85]} />
+      <directionalLight
+        position={[2.4, 5.2, 2.8]}
+        intensity={2.6}
+        castShadow
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+      />
+      <directionalLight position={[-3.2, 2.0, -1.8]} intensity={0.55} color="#8eb4ff" />
+      <directionalLight position={[0.2, 1.4, 3.5]} intensity={0.35} color="#ffc98a" />
+      <mesh rotation-x={-Math.PI / 2} position={[0, -0.005, 0]} receiveShadow>
+        <circleGeometry args={[2.4, 64]} />
+        <meshStandardMaterial color={floor} roughness={0.85} metalness={0.12} />
       </mesh>
+      {/* Soft skyline silhouettes — suggests a living city behind the avatar. */}
+      <group position={[0, 0, -4.2]} rotation-y={0.08}>
+        {[
+          [-2.2, 1.1, 0.7],
+          [-1.1, 1.8, 0.9],
+          [0.1, 1.4, 0.75],
+          [1.2, 2.1, 0.85],
+          [2.4, 1.2, 0.65],
+        ].map(([x, h, w], i) => (
+          <mesh key={i} position={[x, h / 2, 0]}>
+            <boxGeometry args={[w, h, 0.4]} />
+            <meshStandardMaterial color="#243044" roughness={0.95} metalness={0.05} />
+          </mesh>
+        ))}
+      </group>
       <StageGlow pulse={pulse} />
       <Preview look={look} emote={emote} />
     </Canvas>

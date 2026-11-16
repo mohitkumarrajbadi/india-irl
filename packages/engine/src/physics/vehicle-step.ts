@@ -1,4 +1,5 @@
 /** Per-tick vehicle integrate + impact detection. */
+import { healthDriveScale } from "./health-drive.ts";
 import type { SimInput } from "./protocol.ts";
 import { followVehicleSeat, type CharState } from "./character.ts";
 import type { PostFn, VehState } from "./sim-types.ts";
@@ -17,7 +18,14 @@ export function stepVehicles(args: {
   const { vehicles, chars, input, drivingVehicleId, localId, dt, post } = args;
   const driving = vehicles.get(drivingVehicleId);
   if (driving?.controller.authority) {
-    driving.controller.setControls(input.throttle, input.steer, input.brake, input.handbrake);
+    const h = healthDriveScale(input.health ?? 1);
+    driving.controller.setControls(
+      input.throttle * h.force,
+      input.steer,
+      input.brake * h.force,
+      input.handbrake,
+      (input.gripMul ?? 1) * h.grip,
+    );
   }
 
   for (const v of vehicles.values()) {
@@ -43,14 +51,13 @@ function emitImpact(
   chars: Map<number, CharState>,
   post: PostFn,
 ): void {
+  void localId;
+  void chars;
   const vel = v.controller.body.linvel();
+  // Main thread owns eject / rider separation via applyCrashHit — do not freeze
+  // the character controller here (that left riders stuck when IMPACT was mild).
   post({
     type: "EVENT",
     event: { type: "IMPACT", entityId: v.id, fx: vel.x, fy: vel.y, fz: vel.z, speed },
   });
-  const local = chars.get(localId);
-  if (local && local.vehicleId === v.id) {
-    local.ragdoll = true;
-    post({ type: "EVENT", event: { type: "RAGDOLL", entityId: local.id, on: true } });
-  }
 }

@@ -11,22 +11,7 @@ export function paintMapMarkers(
   dpr = 1,
 ): void {
   void atlas;
-  const { job, peers, player, meetId, labels } = markers;
-
-  if (job && job.stage !== "idle") {
-    const a = toScreen(job.fromX, job.fromZ);
-    const b = toScreen(job.toX, job.toZ);
-    ctx.strokeStyle = "rgba(231, 197, 106, 0.85)";
-    ctx.lineWidth = 2 * dpr;
-    ctx.setLineDash([5 * dpr, 4 * dpr]);
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    pin(ctx, a.x, a.y, "#46d6c4", dpr);
-    pin(ctx, b.x, b.y, "#e0623a", dpr);
-  }
+  const { peers, player, meetId, labels } = markers;
 
   peers?.forEach((p) => {
     const s = toScreen(p.x, p.z);
@@ -80,16 +65,6 @@ export function paintMapMarkers(
     ctx.stroke();
     ctx.restore();
   }
-}
-
-function pin(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, dpr: number): void {
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(x, y, 4.5 * dpr, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#111";
-  ctx.lineWidth = 1 * dpr;
-  ctx.stroke();
 }
 
 function label(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, dpr: number): void {

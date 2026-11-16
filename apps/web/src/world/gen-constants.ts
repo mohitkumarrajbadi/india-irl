@@ -31,10 +31,10 @@ export const LOTS: Record<Exclude<DistrictKind, "park">, LotStyle> = {
   old: { lot: [10, 15], h: [6, 13], glass: 0, setback: [0.1, 0.5], skip: 0.03, sign: 0.6, trees: 0.2 },
 };
 
-export const ARTERIAL_WIDTH = 18;
-/** Lane center offsets from road centreline (India LHT — negative = keep-left). */
-export const ARTERIAL_LANES = [-2.7, -6.1];
-export const MEDIAN = 1.0;
+export const ARTERIAL_WIDTH = 22;
+/** Lane center offsets from road centreline (India LHT — negative = keep-left). 3 lanes/way. */
+export const ARTERIAL_LANES = [-2.6, -5.8, -9.0];
+export const MEDIAN = 1.2;
 /** Fixed minor-road width so junctions meet cleanly. */
 export const MINOR_WIDTH = 9;
 

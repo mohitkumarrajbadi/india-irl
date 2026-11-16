@@ -4,6 +4,7 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { weather } from "@/game/weather";
+import { wetRoadParams } from "@/gfx/atmosphere-fx";
 import { paverTexture, roadTexture, zebraTexture } from "@/gfx/textures";
 import type { CityData } from "@/world/types";
 import { buildCityGround } from "./city-ground-build";
@@ -16,21 +17,39 @@ export function CityGround({ city }: { city: CityData }) {
     const roadArt = roadTexture("arterial");
     const roadPlain = roadTexture("plain");
     const zebraTex = zebraTexture();
-    const paverTex = paverTexture("#ffffff");
-    const std = (map: THREE.Texture | null, vertexColors: boolean, rough = 0.93) =>
-      new THREE.MeshStandardMaterial({ map, vertexColors, roughness: rough, metalness: 0 });
+    // Mid-grey tile base — city palette comes from vertex colors
+    const paverTex = paverTexture("#8a8680");
+    const roadMat = (map: THREE.Texture, rough = 0.94) =>
+      new THREE.MeshStandardMaterial({
+        map,
+        // Slight lift so dusk/moon + streetlights read asphalt (not a black void)
+        color: "#d4d4d4",
+        roughness: rough,
+        metalness: 0.02,
+        envMapIntensity: 0.12,
+      });
+    // Opaque zebra on asphalt (no alpha) — kills white-slab mip artifacts
     const zebraMat = new THREE.MeshStandardMaterial({
       map: zebraTex,
-      transparent: true,
-      alphaTest: 0.4,
-      roughness: 0.9,
+      color: "#c4c4c4",
+      roughness: 0.95,
+      metalness: 0.02,
       polygonOffset: true,
       polygonOffsetFactor: -2,
       polygonOffsetUnits: -2,
     });
-    const minor = std(roadMinor, false);
-    const art = std(roadArt, false);
-    const plain = std(roadPlain, false);
+    const minor = roadMat(roadMinor);
+    const art = roadMat(roadArt);
+    const plain = roadMat(roadPlain, 0.95);
+    const paver = new THREE.MeshStandardMaterial({
+      map: paverTex,
+      // Soften vertex tint so sidewalks don't flash white vs asphalt at dusk
+      color: "#b0ada8",
+      vertexColors: true,
+      roughness: 0.98,
+      metalness: 0,
+      envMapIntensity: 0.06,
+    });
     return {
       geos,
       textures: [roadMinor, roadArt, roadPlain, zebraTex, paverTex],
@@ -38,13 +57,23 @@ export function CityGround({ city }: { city: CityData }) {
         minor,
         art,
         plain,
-        paver: std(paverTex, true),
-        lot: std(paverTex, true, 1),
-        grass: std(null, true, 1),
+        paver,
+        lot: new THREE.MeshStandardMaterial({
+          map: paverTex,
+          vertexColors: true,
+          roughness: 1,
+          metalness: 0,
+        }),
+        grass: new THREE.MeshStandardMaterial({
+          vertexColors: true,
+          roughness: 1,
+          metalness: 0,
+        }),
         zebra: zebraMat,
         marks: new THREE.MeshStandardMaterial({
-          color: "#ece8d8",
-          roughness: 0.9,
+          color: "#9a9588",
+          roughness: 0.96,
+          metalness: 0.02,
           polygonOffset: true,
           polygonOffsetFactor: -1,
           polygonOffsetUnits: -1,
@@ -64,12 +93,22 @@ export function CityGround({ city }: { city: CityData }) {
     };
   }, [stuff]);
 
+  const lastWet = useRef(-1);
+  const baseColors = useRef<THREE.Color[]>([]);
+  useEffect(() => {
+    baseColors.current = stuff.roads.map((m) => m.color.clone());
+  }, [stuff]);
   useFrame(() => {
     const wet = weather.wet;
-    for (const m of roadMats.current) {
-      m.roughness = 0.93 - wet * 0.55;
-      m.metalness = wet * 0.28;
-    }
+    if (Math.abs(wet - lastWet.current) < 0.008) return;
+    lastWet.current = wet;
+    const p = wetRoadParams(wet);
+    roadMats.current.forEach((m, i) => {
+      m.roughness = p.roughness;
+      m.metalness = p.metalness;
+      const base = baseColors.current[i];
+      if (base) m.color.copy(base).multiplyScalar(p.colorMul);
+    });
   });
 
   const { geos, mats } = stuff;

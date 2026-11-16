@@ -10,12 +10,23 @@ import {
   SHRUB_DEF,
   STALL_DEF,
   TREE_DEF,
+  classifyHit,
   debrisCount,
+  hitSeverity,
+  isSharedBreakSource,
   type BreakMode,
   type DestDef,
   type DestMaterial,
   type DestSource,
 } from "./destructible-catalog.ts";
+
+/** Optional net hook — set from `destructible-breaks` (avoids sim↔net cycle). */
+type BreakNetHook = (source: DestSource, index: number, free: boolean) => void;
+let breakNetHook: BreakNetHook | null = null;
+
+export function setDestructibleBreakHook(fn: BreakNetHook | null): void {
+  breakNetHook = fn;
+}
 
 export type DestEntry = {
   id: number;
@@ -175,28 +186,20 @@ export class DestructibleSim {
     }
     if (!best) return null;
 
-    const closing = v;
-    const massFactor = vehicleMass / (vehicleMass + best.def.mass);
-    const severity = Math.min(
-      1,
-      ((closing - best.def.breakSpeed * 0.4) / 14) * massFactor * (1.15 / best.def.toughness),
-    );
-    if (severity < 0.08) return null;
-
+    const severity = hitSeverity(v, vehicleMass, best.def);
     const dmg = 6 + severity * 38;
-    best.hp -= dmg;
-    if (best.hp > best.def.hp * 0.45) {
+    const hpAfter = best.hp - dmg;
+    const phase = classifyHit(severity, hpAfter, best.def);
+    if (phase === "ignore") return null;
+
+    best.hp = hpAfter;
+    if (phase === "damage") {
       best.state = "damaged";
-      this.nudgeVisual(best, 0.12 * severity);
-      return null;
-    }
-    if (best.hp > 0 && severity < 0.55) {
-      best.state = "damaged";
-      this.nudgeVisual(best, 0.22 * severity);
+      this.nudgeVisual(best, 0.12 + severity * 0.18);
       return null;
     }
 
-    this.breakEntry(best, yaw, speed, severity, now);
+    this.breakEntry(best, yaw, speed, severity, now, true);
     return {
       label: best.def.label,
       mode: best.def.mode,
@@ -205,12 +208,27 @@ export class DestructibleSim {
     };
   }
 
+  /** Peer broke a shared prop — hide + light debris, no rebroadcast. */
+  applyRemoteBreak(source: DestSource, index: number, now: number): void {
+    const e = this.entries.find((x) => x.source === source && x.index === index);
+    if (!e || e.state === "broken") return;
+    this.breakEntry(e, 0, 8, 0.55, now, false);
+  }
+
+  /** Peer respawned a shared prop. */
+  applyRemoteRespawn(source: DestSource, index: number): void {
+    const e = this.entries.find((x) => x.source === source && x.index === index);
+    if (!e || e.state !== "broken") return;
+    this.respawn(e, false);
+  }
+
   private breakEntry(
     e: DestEntry,
     yaw: number,
     speed: number,
     severity: number,
     now: number,
+    broadcast: boolean,
   ): void {
     e.state = "broken";
     e.hp = 0;
@@ -218,6 +236,7 @@ export class DestructibleSim {
     this.hideVisual(e);
     this.disableCircle(e.x, e.z, e.def.radius * e.s + 0.4);
     this.spawnDebris(e, yaw, speed, severity);
+    if (broadcast && isSharedBreakSource(e.source)) breakNetHook?.(e.source, e.index, false);
   }
 
   private disableCircle(x: number, z: number, r: number): void {
@@ -231,9 +250,9 @@ export class DestructibleSim {
     const n = debrisCount(e.def.mode, severity);
     const fx = Math.sin(yaw) * Math.sign(speed || 1);
     const fz = Math.cos(yaw) * Math.sign(speed || 1);
-    let spawned = 0;
-    for (const d of this.debris) {
-      if (d.alive) continue;
+    for (let spawned = 0; spawned < n; spawned += 1) {
+      const d = this.takeDebrisSlot();
+      if (!d) break;
       const side = (Math.random() - 0.5) * 2;
       d.alive = true;
       d.x = e.x + side * 0.4;
@@ -247,9 +266,22 @@ export class DestructibleSim {
       d.maxLife = 1.8 + Math.random() * 1.4;
       d.material = e.def.material;
       d.scale = e.def.mode === "scatter" ? 0.12 + Math.random() * 0.18 : 0.18 + Math.random() * 0.22;
-      spawned += 1;
-      if (spawned >= n) break;
     }
+  }
+
+  /** Free slot, or reclaim the piece with least life left. */
+  private takeDebrisSlot(): DebrisPiece | null {
+    let oldest: DebrisPiece | null = null;
+    let oldestRemain = Infinity;
+    for (const d of this.debris) {
+      if (!d.alive) return d;
+      const remain = d.maxLife - d.life;
+      if (remain < oldestRemain) {
+        oldestRemain = remain;
+        oldest = d;
+      }
+    }
+    return oldest;
   }
 
   private writeInstance(
@@ -316,11 +348,11 @@ export class DestructibleSim {
     }
     for (const e of this.entries) {
       if (e.state !== "broken" || now - e.brokenAt < RESPAWN_MS) continue;
-      this.respawn(e);
+      this.respawn(e, true);
     }
   }
 
-  private respawn(e: DestEntry): void {
+  private respawn(e: DestEntry, broadcast: boolean): void {
     e.state = "ok";
     e.hp = e.def.hp;
     e.brokenAt = 0;
@@ -349,5 +381,6 @@ export class DestructibleSim {
       }
     }
     this.circles.push({ x: e.x, z: e.z, r: e.def.radius * e.s });
+    if (broadcast && isSharedBreakSource(e.source)) breakNetHook?.(e.source, e.index, true);
   }
 }

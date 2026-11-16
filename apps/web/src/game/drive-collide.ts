@@ -68,7 +68,7 @@ export function collidePlayerTraffic(
   let flungBike = false;
 
   for (const a of agents) {
-    if (a.taken || a.ghost > 0.08) continue;
+    if (a.taken || a.wrecked || a.ghost > 0.08) continue;
     const theirs = agentObb(a);
     const cur: Obb = { ...mine, x: px, z: pz };
     if (!reaches(cur, a, theirs)) continue;

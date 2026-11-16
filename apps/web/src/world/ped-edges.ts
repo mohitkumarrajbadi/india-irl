@@ -9,22 +9,23 @@ export type PedEdge = {
   kind: DistrictKind | "landmark" | "lake";
 };
 
+/** Sidewalk spawn weights — market dense, fringe/park quiet (village ≪ city). */
 const DENSITY: Record<string, number> = {
   market: 1.35,
   old: 1.2,
   tech: 0.7,
   cbd: 0.85,
   resi: 0.55,
-  park: 0.9,
+  park: 0.45,
   landmark: 0.4,
-  lake: 0.35,
+  lake: 0.3,
 };
 
 const CITY_MULT: Record<string, number> = {
-  bengaluru: 1.05,
-  pune: 1.0,
-  hyderabad: 1.15,
-  gurugram: 0.9,
+  novapura: 1.05,
+  mandipura: 1.0,
+  neerabad: 1.15,
+  udyogabad: 0.9,
 };
 
 export function cityPedMult(cityId: string): number {

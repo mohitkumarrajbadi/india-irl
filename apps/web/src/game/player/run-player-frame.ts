@@ -6,7 +6,7 @@ import { useNet } from "@/net/store";
 import type { CityData } from "@/world/types";
 import type * as THREE from "three";
 import { drainTouchPulses } from "./drain-touch.ts";
-import { publishLive, syncHud, tickSocialAndJobs } from "./publish-and-hud.ts";
+import { publishLive, syncHud, tickSocialMissions } from "./publish-and-hud.ts";
 import { stepCamera } from "./step-camera.ts";
 import { stepCombatIncoming } from "./step-combat-incoming.ts";
 import { stepDriveMode } from "./step-drive.ts";
@@ -42,7 +42,7 @@ export function runPlayerFrame(ctx: FrameCtx): void {
   if (!frozen) {
     if (s.mode === "foot") stepFoot(s, axes, now, dt);
     else if (s.mode === "drive") stepDriveMode(s, cmds, city, axes, now, dt);
-    else if (s.mode === "passenger") stepPassenger(s, peerMap, now);
+    else if (s.mode === "passenger") stepPassenger(s, peerMap, now, dt);
   }
 
   const heading = stepCamera(s, camera, axes.sprint, dt);
@@ -50,6 +50,6 @@ export function runPlayerFrame(ctx: FrameCtx): void {
   syncHeadlights(s, lights);
   tickPlayerAudio(s, city, dt);
   publishLive(s, frame, heading, axes.forward, peerMap.size, dt);
-  tickSocialAndJobs(s, peerMap);
+  tickSocialMissions(s, peerMap);
   syncHud(s, city, peerMap, dt);
 }

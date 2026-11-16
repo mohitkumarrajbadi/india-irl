@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { labelTexture } from "../gfx/textures";
 import { createVehicle, type VehicleObject } from "../vehicles/object";
 import type { CityConfig } from "../world/types";
+import { garageTopColor } from "../game/cosmetics";
 import { TOP_COLORS, type Look } from "./appearance";
 import { applyActorFrame } from "./actor-frame";
 import type { ActorFrame } from "./actor-types";
@@ -70,7 +71,8 @@ export class Actor {
   }
 
   private ensureVehicle(kind: number): void {
-    const key = kind > 0 ? `${kind}:${this.look.topColor}` : "";
+    const tintIdx = kind === 2 ? garageTopColor(this.look.topColor) : this.look.topColor;
+    const key = kind > 0 ? `${kind}:${tintIdx}` : "";
     if (key === this.vehicleKey) return;
     if (this.vehicle) {
       this.vehicle.root.removeFromParent();
@@ -78,7 +80,11 @@ export class Actor {
     }
     this.vehicleKey = key;
     if (kind > 0) {
-      this.vehicle = createVehicle(kind as 1 | 2 | 3, this.cfg, TOP_COLORS[this.look.topColor]);
+      this.vehicle = createVehicle(
+        kind as 1 | 2 | 3,
+        this.cfg,
+        TOP_COLORS[tintIdx % TOP_COLORS.length]!,
+      );
       this.group.add(this.vehicle.root);
     }
   }

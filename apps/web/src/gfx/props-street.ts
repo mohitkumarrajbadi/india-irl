@@ -57,15 +57,21 @@ export function chaiStall(): THREE.BufferGeometry {
 
 export function glowDisc(): THREE.CanvasTexture {
   const c = document.createElement("canvas");
-  c.width = c.height = 128;
+  c.width = c.height = 256;
   const ctx = c.getContext("2d") as CanvasRenderingContext2D;
-  const grd = ctx.createRadialGradient(64, 64, 2, 64, 64, 64);
-  grd.addColorStop(0, "rgba(255,214,140,1)");
-  grd.addColorStop(0.35, "rgba(255,190,110,0.45)");
-  grd.addColorStop(1, "rgba(255,170,90,0)");
+  ctx.clearRect(0, 0, 256, 256);
+  // Warm sodium wash — keep the core amber (not near-white) so additive pools don't plate the asphalt
+  const grd = ctx.createRadialGradient(128, 128, 8, 128, 128, 128);
+  grd.addColorStop(0, "rgba(255,190,110,0.85)");
+  grd.addColorStop(0.18, "rgba(255,160,70,0.55)");
+  grd.addColorStop(0.4, "rgba(230,130,50,0.28)");
+  grd.addColorStop(0.7, "rgba(200,100,40,0.08)");
+  grd.addColorStop(1, "rgba(180,90,30,0)");
   ctx.fillStyle = grd;
-  ctx.fillRect(0, 0, 128, 128);
+  ctx.fillRect(0, 0, 256, 256);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
+  t.generateMipmaps = true;
+  t.minFilter = THREE.LinearMipmapLinearFilter;
   return t;
 }

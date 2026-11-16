@@ -1,6 +1,6 @@
 /** Vibe engagement types + mission catalog. */
 
-export type MissionId = "enter" | "ride" | "emote" | "chat" | "hang";
+export type MissionId = "enter" | "ride" | "emote" | "chat" | "hang" | "home";
 
 export type VibeState = {
   xp: number;
@@ -46,10 +46,11 @@ export const TITLES = [
 
 export const MISSIONS: { id: MissionId; label: string; xp: number; hint: string }[] = [
   { id: "enter", label: "Step into a city", xp: 15, hint: "Hit Enter" },
-  { id: "ride", label: "Take a ride", xp: 20, hint: "1 / 2 / 3 or hop on" },
+  { id: "ride", label: "Take a ride", xp: 20, hint: "F near a parked scooter / auto / cab" },
   { id: "emote", label: "Throw a vibe", xp: 12, hint: "Z X C V · B Y U dance" },
   { id: "chat", label: "Say something", xp: 18, hint: "Enter to chat" },
   { id: "hang", label: "Hang near someone", xp: 25, hint: "Get within ~12 m" },
+  { id: "home", label: "Visit your flat", xp: 18, hint: "E at a residential door" },
 ];
 
 export const EMPTY_MISSIONS = (): Record<MissionId, boolean> => ({
@@ -58,4 +59,5 @@ export const EMPTY_MISSIONS = (): Record<MissionId, boolean> => ({
   emote: false,
   chat: false,
   hang: false,
+  home: false,
 });

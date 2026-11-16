@@ -6,6 +6,7 @@ import type { DriveState } from "@/vehicles/specs";
 import { simInputFromDriveAxes, type FrameAxes } from "@/game/input/frame-intent";
 import { runtime } from "@/game/runtime";
 import { LOCAL_VEHICLE_ID, isRapierDriveKind } from "./drive-ids";
+import { regionAt } from "@/world/terrain-sample";
 import { collisionResidentCount, syncCollisionChunks } from "./collision-manager";
 import {
   getDriveBridge,
@@ -62,13 +63,16 @@ export function driveAuthorityStep(ds: DriveState, kind: number, axes: FrameAxes
   if (!b) return false;
 
   const city = runtime.city;
-  if (city) syncCollisionChunks(b, city, ds.x, ds.z);
+  if (city) {
+    const region = regionAt(city, ds.x, ds.z);
+    syncCollisionChunks(b, city, ds.x, ds.z, ds.speed, region);
+  }
 
-  b.setInput(simInputFromDriveAxes({ ...axes, speed: ds.speed }));
+  b.setInput(simInputFromDriveAxes({ ...axes, speed: ds.speed, gripMul: axes.gripMul ?? 1 }));
   const ent = getDriveEntities().find((e) => e.id === LOCAL_VEHICLE_ID);
   if (!ent) return false;
   // Interpolation: buffer worker snaps, sample ~1 tick behind for jitter-free mesh motion.
-  pushDriveSample({ ...poseFromSnap(ent), y: ent.y });
+  pushDriveSample(poseFromSnap(ent));
   const smooth = sampleDrivePose() ?? poseFromSnap(ent);
   applyPoseToDrive(ds, smooth);
   return true;

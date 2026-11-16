@@ -10,7 +10,7 @@ import {
 } from "@/game/onboarding";
 import { live } from "@/game/runtime";
 import { disposeDriveSession, ensureDriveWorker } from "@/game/sim/drive-session";
-import { isRapierDriveEnabled } from "@/game/sim/flags";
+import { isRapierDriveEnabled, isWorldV1Enabled } from "@/game/sim/flags";
 import { toast, useGame } from "@/game/store";
 import { connect, disconnect, useNet } from "@/net/store";
 import { localTitleFor } from "@/world/meets";
@@ -22,19 +22,21 @@ export function useGameSession(city: CityData, name: string, look: Look): void {
   const cityId = useGame((s) => s.cityId);
   const meetId = useGame((s) => s.meetId);
   const joinId = useGame((s) => s.joinId);
+  const worldV1 = isWorldV1Enabled();
+  const roomId = worldV1 ? "ommo" : cityId;
 
   useEffect(() => {
-    connect(cityId, name, look);
+    connect(roomId, name, look);
     if (isRapierDriveEnabled()) {
       ensureDriveWorker({ x: live.x, y: 0, z: live.z, yaw: live.yaw });
     }
     return () => {
       disconnect();
       disposeDriveSession();
-      // runtime cleared by GameCanvas unmount path via city hook cleanup below
     };
+    // World mode: stay in one room across destination/city alias changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cityId, name]);
+  }, [roomId, name]);
 
   useEffect(() => {
     const endowed = applyEndowment();
@@ -53,7 +55,7 @@ export function useGameSession(city: CityData, name: string, look: Look): void {
     toast(`Welcome · you’re ${loadOnboard().localTitle || title}`);
     const t1 = setTimeout(() => {
       toast("Walk up to a parked vehicle · press F to drive");
-      advanceStep("easy_job");
+      advanceStep("first_ride");
     }, 2800);
     return () => clearTimeout(t1);
     // eslint-disable-next-line react-hooks/exhaustive-deps

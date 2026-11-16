@@ -27,7 +27,7 @@ export function fruitCart(): THREE.BufferGeometry {
   return g.build();
 }
 
-/** Marigold / flower seller cart — Pune FC Road, Hyd Old City, temple streets. */
+/** Marigold / flower seller cart — Book Street, Old Quarters, temple streets. */
 export function flowerCart(): THREE.BufferGeometry {
   const g = new GeoBuilder();
   g.roundBox(1.3, 0.55, 0.7, "#7a4a28", { pos: [0, 0.4, 0] }, 0.08, 3);
@@ -57,7 +57,7 @@ export function roadsideShrine(): THREE.BufferGeometry {
   return g.build();
 }
 
-/** Tower crane — Gurugram / Hyd skyline construction. */
+/** Tower crane — Udyogabad / Neerabad skyline construction. */
 export function crane(): THREE.BufferGeometry {
   const g = new GeoBuilder();
   g.box(0.35, 28, 0.35, "#f2c230", { pos: [0, 14, 0] });

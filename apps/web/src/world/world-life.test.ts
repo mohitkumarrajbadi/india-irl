@@ -35,7 +35,7 @@ scareNearDriver([ahead], 0, 0, 0, 12, 2, 9000);
 assert.equal(ahead.mood, "flee");
 
 const cow: Animal = {
-  kind: 0, tint: 0, scale: 1, x: 0, z: 0, yaw: 0, speed: 0, phase: 0,
+  kind: 0, tint: 0, scale: 1, x: 0, z: 0, y: 0, yaw: 0, speed: 0, phase: 0,
   mood: "idle", moodUntil: 0, tx: 3, tz: 0, hx: 0, hz: 0, leash: 14,
 };
 tickAnimal(cow, 0.05, 2, 0, 100, () => 0.5, 10);
@@ -44,5 +44,13 @@ assert.ok(ANIMAL_INFO[0].radius > 0.5);
 
 scareAnimalHorn(cow, 0, 0, 200, () => 0.1);
 assert.equal(cow.mood, "flee");
+
+// Dog chase: forced rng triggers approach on slow foot player.
+const dog: Animal = {
+  kind: 1, tint: 0, scale: 1, x: 6, z: 0, y: 0, yaw: 0, speed: 0, phase: 0,
+  mood: "idle", moodUntil: 0, tx: 0, tz: 0, hx: 6, hz: 0, leash: 20,
+};
+tickAnimal(dog, 0.05, 0, 0, 1000, () => 0.005, 0.5);
+assert.equal(dog.mood, "chase");
 
 console.log("world-life.test.ts ok");

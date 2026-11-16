@@ -16,6 +16,7 @@ import { ejectImpulse, impactShake, naturalBounce, softSpeedScrub } from "@/game
 import { live, runtime } from "@/game/runtime";
 import { driveAuthorityExit } from "@/game/sim/drive-authority";
 import { toast, useGame } from "@/game/store";
+import { sendClaim } from "@/net/store";
 import { PLAYER_PHYSICS } from "@/vehicles/physics-props";
 import { releaseWorldParked } from "@/game/world-vehicles";
 import { resolveOut, PLAYER_RADIUS } from "./constants.ts";
@@ -23,15 +24,40 @@ import type { CrashHitOpts, PlayerState } from "./types.ts";
 
 type Grid = { resolve: (x: number, z: number, r: number, out: { x: number; z: number }) => void };
 
+/** Leave chassis in the world as a remountable wreck; free traffic/parked claims. */
 function stashChassis(s: PlayerState, untilMs: number): void {
   const pose = { x: s.ds.x, z: s.ds.z, yaw: s.ds.yaw };
   const kind = s.kind as 1 | 2 | 3;
+  const stash = {
+    ...pose,
+    kind,
+    until: performance.now() + untilMs,
+    chassisHp: s.chassisHp,
+  };
   if (runtime.city && s.worldParkedIndex != null) {
     releaseWorldParked(runtime.city, s.worldParkedIndex, pose);
-    s.parked = { ...pose, kind, until: performance.now() + untilMs, worldIndex: s.worldParkedIndex };
+    sendClaim("p", s.worldParkedIndex, true);
+    s.parked = { ...stash, worldIndex: s.worldParkedIndex };
     s.worldParkedIndex = null;
+  } else if (s.trafficAgentIndex != null) {
+    const idx = s.trafficAgentIndex;
+    const a = runtime.traffic?.agents[idx];
+    if (a) {
+      a.x = pose.x;
+      a.z = pose.z;
+      a.yaw = pose.yaw;
+      a.speed = 0;
+      // Visible wreck: not `taken` (that sinks the mesh), AI frozen via wrecked.
+      a.taken = false;
+      a.wrecked = true;
+      a.appearT = 0;
+    }
+    // Free + wreck pose so peers freeze the same visible chassis.
+    sendClaim("t", idx, true, { wreck: true, x: pose.x, z: pose.z, yaw: pose.yaw });
+    s.parked = { ...stash, trafficIndex: idx };
+    s.trafficAgentIndex = null;
   } else {
-    s.parked = { ...pose, kind, until: performance.now() + untilMs };
+    s.parked = stash;
   }
 }
 
@@ -75,11 +101,12 @@ export function ejectCrash(
   s.blinker = 0;
   s.blinkerArmed = false;
   s.stunUntil = performance.now() + 400 + severity * (phys.separableRider ? 720 : 500);
+  s.shake = Math.max(s.shake, 0.55 + severity * 0.4);
   driveAuthorityExit({ x: s.x, y: s.y, z: s.z, yaw: s.facing });
   setEngine(0, 0);
   hitCue(1.4);
   crashCue(1.1 + severity * 0.4);
-  if (wasBike) toast("Thrown clear of the scooter");
+  if (wasBike) toast(severity >= 0.75 ? "Thrown clear — bike still there" : "Thrown clear of the scooter");
 }
 
 export function triggerWasted(s: PlayerState): void {

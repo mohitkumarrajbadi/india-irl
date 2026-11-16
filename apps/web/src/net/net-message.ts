@@ -6,6 +6,11 @@ import { addChat, makePeer, refreshIds, useNet } from "./net-peers";
 import type { TrafficHandler } from "./net-types";
 import { applyPoseToPeer } from "./pose-apply";
 import type { TransportKind, Wire } from "./transport";
+import { applyApartmentMessage } from "@/game/apartment";
+import { applyConvoyMessage } from "@/game/social/convoy";
+import { toast } from "@/game/store";
+import { applyBreakMessage } from "./destructible-breaks";
+import { applyClaimMessage, releaseClaimsForPeer } from "./vehicle-claims";
 import { voice } from "./voice";
 
 let onTraffic: TrafficHandler | null = null;
@@ -97,8 +102,31 @@ export function onMessage(msg: Wire, kind: TransportKind, sendJoin: (reply: bool
       break;
     }
     case "leave": {
+      if (id) releaseClaimsForPeer(id);
       if (map.delete(id)) refreshIds();
       voice.handleSignal({ t: "vx", id, to: state.selfId });
+      break;
+    }
+    case "cv": {
+      if (!id || id === state.selfId) break;
+      const note = applyConvoyMessage(msg, id);
+      if (note) toast(note);
+      break;
+    }
+    case "ap": {
+      if (!id || id === state.selfId) break;
+      const note = applyApartmentMessage(msg, id);
+      if (note) toast(note);
+      break;
+    }
+    case "cl": {
+      if (!id || id === state.selfId) break;
+      applyClaimMessage(msg, id);
+      break;
+    }
+    case "db": {
+      if (!id || id === state.selfId) break;
+      applyBreakMessage(msg);
       break;
     }
     case "vo":

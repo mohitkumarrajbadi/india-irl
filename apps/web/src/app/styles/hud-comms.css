@@ -97,3 +97,11 @@
   pointer-events: auto;
 }
 
+.meter .local-only-banner {
+  font-size: 11px;
+  line-height: 1.35;
+  color: #e8c070;
+  text-align: center;
+  max-width: 18em;
+}
+

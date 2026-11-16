@@ -15,9 +15,9 @@ const body = Figtree({
 });
 
 export const metadata: Metadata = {
-  title: "India IRL — hang out in India's IT cities",
+  title: "OMMO — one world, many cities",
   description:
-    "Build your avatar and walk, ride, and voice-chat with friends in Bengaluru, Pune, Hyderabad and Gurugram — live in the browser.",
+    "Build your avatar and walk, ride, and voice-chat with friends in Novapura, Mandipura, Neerabad and Udyogabad — live in the browser.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

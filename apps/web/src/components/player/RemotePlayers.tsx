@@ -62,13 +62,14 @@ export function RemotePlayers({ config }: { config: CityConfig }) {
 
     actors.current.forEach((entry, id) => {
       const p = peerMap.get(id);
-      if (!p || p.snaps.length === 0) {
+      // Wait for ≥2 snaps so Hermite/linear has a segment — avoids origin/default pop.
+      if (!p || p.snaps.length < 2) {
         entry.actor.group.visible = false;
         return;
       }
 
       // Cheap distance before interpolation work.
-      const last = p.snaps[p.snaps.length - 1];
+      const last = p.snaps[p.snaps.length - 1]!;
       const rough2 = (last.x - camX) ** 2 + (last.z - camZ) ** 2;
       const tier = lodTier(rough2, cull);
       if (tier === "culled") {

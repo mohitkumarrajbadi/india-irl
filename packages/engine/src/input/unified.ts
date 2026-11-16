@@ -48,6 +48,7 @@ export function intentToSimInput(intent: Intent): SimInput {
     sprint: intent.sprint,
     jump: intent.jump,
     interact: intent.interact,
+    gripMul: 1,
     actions: intent.actions.slice(),
   };
 }

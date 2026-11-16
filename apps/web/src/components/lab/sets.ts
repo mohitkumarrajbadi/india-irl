@@ -79,8 +79,8 @@ function modelObject(m: Model, tint?: string): THREE.Object3D {
 }
 
 export function vehicleSet(): LabSet {
-  const cfg = CITIES.bengaluru;
-  const ggn = CITIES.gurugram;
+  const cfg = CITIES.novapura;
+  const ggn = CITIES.udyogabad;
   return {
     items: [
       { obj: createVehicle(2, cfg, "#b3261e").root, label: "scooter", width: 1.6 },
@@ -92,7 +92,7 @@ export function vehicleSet(): LabSet {
 }
 
 export function trafficSet(): LabSet {
-  const cfg = CITIES.bengaluru;
+  const cfg = CITIES.novapura;
   const o = { occupied: true };
   return {
     items: [

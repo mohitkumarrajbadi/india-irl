@@ -22,8 +22,9 @@ export type EnterableHit =
       trafficKind: TrafficKind;
     };
 
+/** Reach matches parked curb (≈18 m) but stays tight to chassis length. */
 function enterRadius(halfLen: number): number {
-  return Math.max(16, halfLen + 8);
+  return Math.min(18, Math.max(7, halfLen + 3.2));
 }
 
 export function findNearestTraffic(

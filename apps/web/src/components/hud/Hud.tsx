@@ -109,11 +109,11 @@ export function Hud({ city }: { city: CityData }) {
 
       {!locked && !chatOpen ? (
         <div className="prompt">
-          <h2>Click to step into {city.config.name}</h2>
+          <h2>Click to enter {city.config.name}</h2>
           <p>{city.config.tagline}</p>
         </div>
       ) : (
-        <div className="crosshair" />
+        <div className="crosshair" aria-hidden />
       )}
 
       <TouchControls />

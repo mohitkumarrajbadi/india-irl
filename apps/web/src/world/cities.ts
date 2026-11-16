@@ -1,8 +1,10 @@
 import type { CityConfig, CityId } from "./types.ts";
-import { bengaluru } from "./city-bengaluru.ts";
-import { gurugram } from "./city-gurugram.ts";
-import { hyderabad } from "./city-hyderabad.ts";
-import { pune } from "./city-pune.ts";
+import { CITY_IDS } from "./city-aliases.ts";
+import { mandipura } from "./city-mandipura.ts";
+import { neerabad } from "./city-neerabad.ts";
+import { novapura } from "./city-novapura.ts";
+import { udyogabad } from "./city-udyogabad.ts";
 
-export const CITIES: Record<CityId, CityConfig> = { bengaluru, pune, hyderabad, gurugram };
-export const CITY_IDS: CityId[] = ["bengaluru", "pune", "hyderabad", "gurugram"];
+export { CITY_IDS, isCityId, resolveCityId, resolveMeetId } from "./city-aliases.ts";
+
+export const CITIES: Record<CityId, CityConfig> = { novapura, mandipura, neerabad, udyogabad };

@@ -5,14 +5,16 @@ import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { env } from "@/gfx/env";
 import { vertexMat } from "@/gfx/geo";
-import { quality } from "@/game/quality";
+import { QUALITY_PRESETS, quality } from "@/game/quality";
 import { live, obstacles, runtime } from "@/game/runtime";
+import { useGame } from "@/game/store";
 import { setTrafficHandler, useNet } from "@/net/store";
 import { glassMaterial, buildAuto, buildBike, buildBus, buildCar, buildTruck, type Model } from "@/vehicles/models";
 import { TrafficSim } from "@/vehicles/traffic";
 import type { CityData } from "@/world/types";
 import { createTrafficLights, writeTrafficLights } from "./traffic-lights";
 import { writeTrafficMatrices } from "./traffic-matrices";
+import { appendCrossingPedObstacles } from "@/vehicles/traffic-ped-yield";
 import { applyTrafficSnapshot, isTrafficHost, publishTrafficSnapshot } from "./traffic-sync";
 
 const CAR_TINTS = ["#f4f4f4", "#c9ccd1", "#2f3a4a", "#b3261e", "#1d4e89", "#e8e1cf", "#6b6e75", "#1f5d3a"].map((c) => new THREE.Color(c).getHex());
@@ -20,13 +22,18 @@ const BIKE_TINTS = ["#b3261e", "#1d4e89", "#1b1b1b", "#e2a02c", "#f4f4f4", "#2a7
 const TRUCK_TINTS = ["#2a6aa3", "#a5361f", "#2f7a3a", "#d89a2b"].map((c) => new THREE.Color(c).getHex());
 
 export function Traffic({ city }: { city: CityData }) {
-  const counts = quality.active.traffic;
-  const castShadows = quality.active.shadows;
+  // Fleet size follows preference (stable) — auto tier flaps must not remount / despawn cars
+  const qualityId = useGame((s) => s.qualityId);
+  const tier = useGame((s) => s.qualityTier);
+  const fleetTier = qualityId === "auto" ? "medium" : qualityId;
+  const counts = (QUALITY_PRESETS[fleetTier] ?? quality.active).traffic;
+  const castShadows = (QUALITY_PRESETS[tier] ?? quality.active).shadows;
   const sendAcc = useRef(0);
   const { sim, models, meshes, lights } = useMemo(() => {
     const busTint = new THREE.Color(city.config.metro.color).getHex();
     const tints = [[0xffffff], BIKE_TINTS, CAR_TINTS, [busTint], TRUCK_TINTS];
     const sim = new TrafficSim(city, counts, tints, city.config.seed);
+    sim.seed(live.x, live.z, live.yaw);
     const models: Model[] = [
       buildAuto(city.config.livery.auto, { occupied: true }),
       buildBike({ occupied: true }),
@@ -37,7 +44,7 @@ export function Traffic({ city }: { city: CityData }) {
     const meshes = models.map((model, k) => {
       const body = new THREE.InstancedMesh(model.body, vertexMat, counts[k]);
       body.frustumCulled = false;
-      body.castShadow = castShadows;
+      body.castShadow = false;
       body.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       let slot = 0;
       for (const a of sim.agents) if (a.kind === k) body.setColorAt(slot++, new THREE.Color(a.tint));
@@ -50,13 +57,15 @@ export function Traffic({ city }: { city: CityData }) {
       }
       return { body, glass };
     });
-    const beamBudget = castShadows ? 8 : 4;
-    const lights = createTrafficLights(counts, beamBudget);
+    const lights = createTrafficLights(counts, 4);
     return { sim, models, meshes, lights };
-  }, [city, counts, castShadows]);
+  }, [city, counts]);
 
   useEffect(() => {
-    sim.seed(live.x, live.z);
+    for (const { body } of meshes) body.castShadow = castShadows;
+  }, [meshes, castShadows]);
+
+  useEffect(() => {
     runtime.traffic = sim;
     setTrafficHandler((_from, packed) => applyTrafficSnapshot(sim, packed));
     return () => {
@@ -106,8 +115,10 @@ export function Traffic({ city }: { city: CityData }) {
       if (dx * dx + dz * dz < R2) obstacles.push(o);
     }
     runtime.animals?.pushObstacles(obstacles, live.x, live.z);
+    const pedList = runtime.peds?.peds;
+    if (pedList) appendCrossingPedObstacles(obstacles, pedList, live.x, live.z);
 
-    sim.update(dt, live.x, live.z, obstacles);
+    sim.update(dt, live.x, live.z, obstacles, live.yaw);
 
     sendAcc.current += dt;
     if (sendAcc.current > 0.5 && selfId && isTrafficHost(selfId, peerIds)) {

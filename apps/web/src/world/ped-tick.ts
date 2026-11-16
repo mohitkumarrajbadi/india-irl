@@ -1,10 +1,24 @@
 /** Per-frame sidewalk AI: walk / intent / flee / fight / thrown / runover / down. */
 import { clamp } from "../lib/math.ts";
 import { between, type Rng } from "../lib/rng.ts";
+import { pedCrossShouldWait } from "./ped-cross.ts";
 import type { PedIntent } from "./ped-intent.ts";
 import type { Ped } from "./pedestrians.ts";
 
 export type PedRetarget = (p: Ped) => void;
+
+export type PedCrossCtx = {
+  xs: readonly number[];
+  zs: readonly number[];
+  timeSec: number;
+};
+
+let crossCtx: PedCrossCtx | null = null;
+
+/** Set once per PedestrianSim.update so cross intents can read signals. */
+export function setPedCrossCtx(ctx: PedCrossCtx | null): void {
+  crossCtx = ctx;
+}
 
 const GRAV = 18;
 
@@ -174,6 +188,15 @@ function tickIntent(
       p.intent = "patrol";
       retarget(p);
       return false;
+    }
+    // Hold at curb while conflicting traffic has green/amber.
+    if (
+      crossCtx &&
+      pedCrossShouldWait(p.x, p.z, p.tx, p.tz, crossCtx.xs, crossCtx.zs, crossCtx.timeSec)
+    ) {
+      p.yaw = Math.atan2(dx, dz);
+      p.phase += dt * 1.1;
+      return true;
     }
     const spd = p.speed * 1.15;
     p.x += (dx / dist) * spd * dt;

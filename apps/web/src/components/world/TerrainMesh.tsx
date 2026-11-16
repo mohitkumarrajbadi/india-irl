@@ -2,15 +2,17 @@
 
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
-import { quality } from "@/game/quality";
+import { QUALITY_PRESETS, quality } from "@/game/quality";
+import { useGame } from "@/game/store";
 import { heightAt, regionAt } from "@/world/terrain-sample";
 import { terrainProfile } from "@/world/terrain-profile";
 import type { CityData } from "@/world/types";
 
 /** Outer apron + soft fringe undulation (city fabric stays flat). */
 export function TerrainMesh({ city }: { city: CityData }) {
+  const tier = useGame((s) => s.qualityTier);
   const { geo, mat } = useMemo(() => {
-    const seg = quality.active.terrainSeg;
+    const seg = (QUALITY_PRESETS[tier] ?? quality.active).terrainSeg;
     const prof = terrainProfile(city.config.id);
     const { bounds } = city;
     const cx = (bounds.minX + bounds.maxX) * 0.5;
@@ -60,7 +62,7 @@ export function TerrainMesh({ city }: { city: CityData }) {
       flatShading: false,
     });
     return { geo, mat, cx, cz };
-  }, [city]);
+  }, [city, tier]);
 
   useEffect(
     () => () => {

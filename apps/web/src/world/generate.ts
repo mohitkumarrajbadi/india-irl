@@ -16,6 +16,8 @@ import { fillStreetEdge } from "./gen-street-edge.ts";
 import { addTrailColliders } from "./gen-trail-collide.ts";
 import { decorateTrailLife } from "./gen-trail-life.ts";
 import { buildTrailRoads } from "./gen-trail-roads.ts";
+import { buildUnderpass } from "./gen-underpass.ts";
+import { buildVillageSettlements } from "./gen-village-settle.ts";
 import type { CityConfig, CityData } from "./types.ts";
 
 export { WALK, LANDMARK_FOOTPRINT } from "./gen-constants.ts";
@@ -83,8 +85,10 @@ export function generateCity(cfg: CityConfig): CityData {
   const trails = buildTrailRoads(cfg, bounds, blocks, roadsX, roadsZ, xs, zs, rng);
   decorateTrailLife(g, trails);
   addTrailColliders(g, trails);
+  const villages = buildVillageSettlements(g, trails, bounds);
   pushOuterWalls(g, bounds, trails);
   const flyover = buildFlyover(g);
+  const underpass = buildUnderpass(g);
 
   const sb = blocks.find((b) => b.bi === cfg.spawn.bi && b.bj === cfg.spawn.bj)!;
   const meets = cfg.meets.map((spec) => {
@@ -122,6 +126,8 @@ export function generateCity(cfg: CityConfig): CityData {
     circles: g.circles,
     trails,
     flyover,
+    underpass,
+    villages,
     bounds,
     spawn: { x: (sb.minX + sb.maxX) / 2 + 9, z: sb.minZ + 1.7, yaw: Math.PI / 2 },
   };

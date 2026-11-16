@@ -1,5 +1,5 @@
 /** localStorage load/save + IST day helpers for vibe. */
-import { EMPTY_MISSIONS, type VibeState } from "./vibe-types";
+import { EMPTY_MISSIONS, type VibeState } from "./vibe-types.ts";
 
 const STORAGE = "india-irl:vibe:v1";
 

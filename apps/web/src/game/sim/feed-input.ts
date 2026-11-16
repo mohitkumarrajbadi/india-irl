@@ -23,6 +23,7 @@ export function buildShadowInput(): SimInput {
     sprint: touchInput.sprint,
     jump: touchInput.jump,
     interact: false,
+    gripMul: 1,
     actions: emptyActions,
   };
 }

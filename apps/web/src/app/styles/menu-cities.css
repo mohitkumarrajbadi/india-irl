@@ -122,3 +122,79 @@
   color: rgba(243, 239, 228, 0.65);
 }
 
+.dest-browser {
+  display: grid;
+  gap: 12px;
+}
+
+.dest-world-name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--cream);
+}
+
+.dest-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(243, 239, 228, 0.62);
+}
+
+.dest-featured {
+  display: grid;
+  gap: 8px;
+}
+
+.dest-card {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(243, 239, 228, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.dest-card:hover {
+  border-color: rgba(243, 239, 228, 0.22);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dest-card.on {
+  border-color: color-mix(in srgb, var(--city-accent) 50%, transparent);
+  background: var(--city-soft);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--city-accent) 25%, transparent);
+}
+
+.dest-card b {
+  font-size: 14px;
+  letter-spacing: -0.02em;
+}
+
+.dest-card span {
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgba(243, 239, 228, 0.68);
+}
+
+.dest-card em {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--city-accent);
+}
+
+.dest-group {
+  display: grid;
+  gap: 8px;
+}
+
+.friends-panel {
+  display: grid;
+  gap: 10px;
+}
+

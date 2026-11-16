@@ -1,5 +1,6 @@
 import { relayHttp } from "./transport";
 import type { CityId } from "@/world/types";
+import { resolveCityId } from "@/world/city-aliases";
 
 export type MeetStat = { n: number; talking: number };
 
@@ -10,43 +11,55 @@ export type CityStat = {
   recentJoins: { name: string; meet: string | null; at: number }[];
 };
 
-export type StatsMap = Partial<Record<CityId, CityStat>>;
+export type RoomId = CityId | "ommo";
+
+export type StatsMap = Partial<Record<RoomId, CityStat>>;
+
+function parseCityStat(val: unknown): CityStat | null {
+  if (typeof val === "number") {
+    return { online: val, talking: 0, meets: {}, recentJoins: [] };
+  }
+  if (!val || typeof val !== "object") return null;
+  const v = val as Record<string, unknown>;
+  const meets: Record<string, MeetStat> = {};
+  if (v.meets && typeof v.meets === "object") {
+    for (const [meetId, m] of Object.entries(v.meets as Record<string, unknown>)) {
+      if (!m || typeof m !== "object") continue;
+      const mm = m as Record<string, unknown>;
+      meets[meetId] = { n: Number(mm.n) | 0, talking: Number(mm.talking) | 0 };
+    }
+  }
+  const recentJoins = Array.isArray(v.recentJoins)
+    ? v.recentJoins
+        .filter((j): j is { name: string; meet: string | null; at: number } => !!j && typeof j === "object" && typeof (j as { name?: string }).name === "string")
+        .map((j) => ({
+          name: String(j.name).slice(0, 16),
+          meet: typeof j.meet === "string" ? j.meet : null,
+          at: Number(j.at) || 0,
+        }))
+    : [];
+  return {
+    online: Number(v.online) | 0,
+    talking: Number(v.talking) | 0,
+    meets,
+    recentJoins,
+  };
+}
 
 /** Normalize legacy flat `{ city: number }` or new rich stats. */
 export function normalizeStats(raw: unknown): StatsMap {
   if (!raw || typeof raw !== "object") return {};
   const out: StatsMap = {};
   for (const [city, val] of Object.entries(raw as Record<string, unknown>)) {
-    if (city !== "bengaluru" && city !== "pune" && city !== "hyderabad" && city !== "gurugram") continue;
-    if (typeof val === "number") {
-      out[city] = { online: val, talking: 0, meets: {}, recentJoins: [] };
+    if (city === "ommo") {
+      const st = parseCityStat(val);
+      if (st) out.ommo = st;
       continue;
     }
-    if (!val || typeof val !== "object") continue;
-    const v = val as Record<string, unknown>;
-    const meets: Record<string, MeetStat> = {};
-    if (v.meets && typeof v.meets === "object") {
-      for (const [id, m] of Object.entries(v.meets as Record<string, unknown>)) {
-        if (!m || typeof m !== "object") continue;
-        const mm = m as Record<string, unknown>;
-        meets[id] = { n: Number(mm.n) | 0, talking: Number(mm.talking) | 0 };
-      }
-    }
-    const recentJoins = Array.isArray(v.recentJoins)
-      ? v.recentJoins
-          .filter((j): j is { name: string; meet: string | null; at: number } => !!j && typeof j === "object" && typeof (j as { name?: string }).name === "string")
-          .map((j) => ({
-            name: String(j.name).slice(0, 16),
-            meet: typeof j.meet === "string" ? j.meet : null,
-            at: Number(j.at) || 0,
-          }))
-      : [];
-    out[city] = {
-      online: Number(v.online) | 0,
-      talking: Number(v.talking) | 0,
-      meets,
-      recentJoins,
-    };
+    const id = resolveCityId(city);
+    if (!id) continue;
+    const st = parseCityStat(val);
+    if (st) out[id] = st;
   }
   return out;
 }
@@ -63,7 +76,7 @@ export async function fetchStats(signal?: AbortSignal): Promise<StatsMap> {
 
 export type PlanInfo = {
   id: string;
-  city: CityId;
+  city: CityId | "ommo";
   meet: string;
   hostName: string;
   expiresAt: number;

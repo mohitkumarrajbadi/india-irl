@@ -22,4 +22,6 @@ export type {
   TrailKind,
   TrailRoad,
   Flyover,
+  Underpass,
+  VillageSettlement,
 } from "./types-data";

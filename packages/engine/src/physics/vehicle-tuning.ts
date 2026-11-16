@@ -45,22 +45,21 @@ function wheel(
 
 export function tuningFor(kind: VehicleKind): VehicleTuning {
   if (kind === VK.bike) {
-    const susp = 0.55;
-    const grip = 1.05;
+    // True 2-wheel motorcycle / scooter — front + rear on centreline.
+    const susp = 0.62;
+    const grip = 1.12;
     return {
       kind,
-      mass: 140,
-      comY: 0.42,
-      maxForce: 2800,
-      maxSteer: 0.55,
-      brakeForce: 4200,
-      handbrakeForce: 5200,
-      leanGain: 0.5,
+      mass: 155,
+      comY: 0.38,
+      maxForce: 3000,
+      maxSteer: 0.58,
+      brakeForce: 4800,
+      handbrakeForce: 5600,
+      leanGain: 0.9,
       wheels: [
-        wheel(-0.35, 0.12, 0.55, 0.22, susp, grip),
-        wheel(0.35, 0.12, 0.55, 0.22, susp, grip),
-        wheel(-0.35, 0.12, -0.55, 0.22, susp, grip),
-        wheel(0.35, 0.12, -0.55, 0.22, susp, grip),
+        wheel(0, 0.14, 0.78, 0.28, susp, grip),
+        wheel(0, 0.14, -0.72, 0.3, susp * 1.05, grip),
       ],
     };
   }
@@ -105,7 +104,7 @@ export function tuningFor(kind: VehicleKind): VehicleTuning {
 
 /** Chassis half-extents for collider cook. */
 export function chassisHalfExtents(kind: number): { hx: number; hy: number; hz: number } {
-  if (kind === VK.bike) return { hx: 0.35, hy: 0.45, hz: 0.85 };
+  if (kind === VK.bike) return { hx: 0.28, hy: 0.5, hz: 0.95 };
   if (kind === VK.cab) return { hx: 0.9, hy: 0.45, hz: 2.0 };
   return { hx: 0.65, hy: 0.55, hz: 1.2 };
 }

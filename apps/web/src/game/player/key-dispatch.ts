@@ -1,5 +1,8 @@
 /** One-shot key actions (non-hold). */
 import { unlockAudio } from "@/game/audio";
+import { cycleGaragePaint } from "@/game/cosmetics";
+import { apartmentInviteNearest } from "@/game/social/apartment-invite";
+import { convoyKeyAction } from "@/game/social/convoy-action";
 import { toast, useGame } from "@/game/store";
 import { cycleWeather } from "@/game/weather";
 import { cycleTimePreset } from "@/gfx/env";
@@ -69,6 +72,12 @@ export function dispatchKeyAction(s: PlayerState, cmds: PlayerCmds, code: string
     case "KeyN":
       useGame.setState((st) => ({ mapOpen: !st.mapOpen }));
       break;
+    case "KeyC":
+      if (!apartmentInviteNearest()) convoyKeyAction(!!s.keys.shift);
+      break;
+    case "KeyP":
+      toast(cycleGaragePaint());
+      break;
     case "Enter":
       useGame.setState({ chatOpen: true });
       break;
@@ -77,9 +86,6 @@ export function dispatchKeyAction(s: PlayerState, cmds: PlayerCmds, code: string
       break;
     case "KeyX":
       cmds.emote(2);
-      break;
-    case "KeyC":
-      cmds.emote(3);
       break;
     case "KeyV":
       cmds.emote(4);

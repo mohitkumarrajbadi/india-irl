@@ -7,7 +7,7 @@ import { useGame } from "@/game/store";
 import { useNet } from "@/net/store";
 import type { CityData } from "@/world/types";
 
-/** Full-city map overlay — districts, meets, landmarks, peers, job route. */
+/** Full-city map overlay — districts, meets, landmarks, peers. */
 export function MapPreview({ city }: { city: CityData }) {
   const open = useGame((s) => s.mapOpen);
   const meetId = useGame((s) => s.meetId);
@@ -73,7 +73,6 @@ export function MapPreview({ city }: { city: CityData }) {
         {
           player: { x: live.x, z: live.z, yaw: live.yaw },
           peers,
-          job: null,
           meetId,
           labels: true,
         },
@@ -122,7 +121,6 @@ export function MapPreview({ city }: { city: CityData }) {
           <li><i className="leg meet" /> Meet</li>
           <li><i className="leg land" /> Landmark</li>
           <li><i className="leg metro" style={{ background: city.config.metro.color }} /> Metro</li>
-          <li><i className="leg job" /> Job route</li>
         </ul>
       </div>
     </div>

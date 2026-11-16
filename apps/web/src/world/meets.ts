@@ -5,6 +5,9 @@
  */
 
 import type { CityId } from "./types";
+import { isCityId, resolveCityId, resolveMeetId } from "./city-aliases.ts";
+
+export { isCityId, resolveCityId, resolveMeetId };
 
 /** Meters — player counts toward a meet if within this radius. */
 export const MEET_RADIUS = 40;
@@ -19,18 +22,12 @@ export type DeepLink = {
   plan: string | null;
 };
 
-const CITIES: CityId[] = ["bengaluru", "pune", "hyderabad", "gurugram"];
-
-export function isCityId(v: string | null | undefined): v is CityId {
-  return !!v && (CITIES as string[]).includes(v);
-}
-
-/** Parse viral deep-link query params. */
+/** Parse viral deep-link query params (legacy city/meet ids aliased). */
 export function parseDeepLink(search: string | URLSearchParams): DeepLink {
   const q = typeof search === "string" ? new URLSearchParams(search.startsWith("?") ? search : `?${search}`) : search;
-  const cityRaw = q.get("city");
-  const city = isCityId(cityRaw) ? cityRaw : null;
-  const meet = q.get("meet")?.replace(/[<>]/g, "").slice(0, 32) || null;
+  const city = resolveCityId(q.get("city"));
+  const meetRaw = q.get("meet")?.replace(/[<>]/g, "").slice(0, 32) || null;
+  const meet = city ? resolveMeetId(city, meetRaw) : meetRaw;
   const join = q.get("join")?.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 24) || null;
   const plan = q.get("plan")?.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 24) || null;
   return { city, meet, join, plan };
@@ -73,7 +70,7 @@ export function identityCaption(lookKey: string): string {
     "Main-character outfit unlocked.",
     "Soft drip. Friends will clock it.",
     "Desk-to-chai transition complete.",
-    "Fresh enough for Cyber Hub selfies.",
+    "Fresh enough for Hub Plaza selfies.",
   ];
   return lines[h % lines.length];
 }

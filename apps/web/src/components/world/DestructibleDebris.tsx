@@ -23,6 +23,12 @@ export function DestructibleDebris({ sim }: { sim: DestructibleSim }) {
     mesh.count = sim.debris.length;
     const colors = new Float32Array(sim.debris.length * 3);
     mesh.instanceColor = new THREE.InstancedBufferAttribute(colors, 3);
+    const hide = new THREE.Object3D();
+    hide.position.set(0, -80, 0);
+    hide.scale.setScalar(0.001);
+    hide.updateMatrix();
+    for (let i = 0; i < sim.debris.length; i += 1) mesh.setMatrixAt(i, hide.matrix);
+    mesh.instanceMatrix.needsUpdate = true;
     return { mesh, dummy: new THREE.Object3D(), color: new THREE.Color(), geo, mat };
   }, [sim]);
 
@@ -36,12 +42,15 @@ export function DestructibleDebris({ sim }: { sim: DestructibleSim }) {
   );
 
   useFrame(() => {
+    let alive = 0;
     for (let i = 0; i < sim.debris.length; i += 1) {
       const d = sim.debris[i]!;
       if (!d.alive) {
-        dummy.position.set(0, -50, 0);
-        dummy.scale.set(0, 0, 0);
+        // Park far below — identity leftover slots were white cubes on the road
+        dummy.position.set(0, -80, 0);
+        dummy.scale.set(0.001, 0.001, 0.001);
       } else {
+        alive += 1;
         const fade = 1 - d.life / d.maxLife;
         dummy.position.set(d.x, d.y, d.z);
         dummy.rotation.set(d.spin, d.spin * 0.7, d.spin * 0.4);
@@ -52,8 +61,9 @@ export function DestructibleDebris({ sim }: { sim: DestructibleSim }) {
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
     }
+    // Keep instance budget fixed; skip color upload when pool is idle.
     mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    if (alive > 0 && mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   });
 
   return <primitive object={mesh} />;

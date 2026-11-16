@@ -3,7 +3,7 @@ import { clamp, lerp, smoothstep } from "../lib/math";
 
 /**
  * Time of day for the whole world. Default is the real clock in India, so a
- * friend in Pune and a friend in Bengaluru always see the same sky.
+ * friend in Mandipura and a friend in Novapura always see the same sky.
  */
 export const clock = {
   /** -1 follows the real IST clock, otherwise a fixed preset hour that drifts slowly. */
@@ -26,6 +26,33 @@ export function cycleTimePreset(): string {
   clock.preset = next.hour;
   clock.presetStart = performance.now();
   return next.label;
+}
+
+const TOD_ALIASES: Record<string, number> = {
+  live: -1,
+  sunrise: 6.2,
+  morning: 9,
+  noon: 13,
+  golden: 17.6,
+  dusk: 18.4,
+  night: 22,
+};
+
+/** Optional `?tod=night|dusk|22` for QA / shareable lighting checks. */
+export function applyTimeQuery(search = typeof window !== "undefined" ? window.location.search : ""): void {
+  const raw = new URLSearchParams(search).get("tod");
+  if (!raw) return;
+  const key = raw.trim().toLowerCase();
+  if (key in TOD_ALIASES) {
+    clock.preset = TOD_ALIASES[key]!;
+    clock.presetStart = typeof performance !== "undefined" ? performance.now() : 0;
+    return;
+  }
+  const hour = Number(key);
+  if (Number.isFinite(hour) && hour >= 0 && hour < 24) {
+    clock.preset = hour;
+    clock.presetStart = typeof performance !== "undefined" ? performance.now() : 0;
+  }
 }
 
 export function gameHour(): number {
@@ -123,16 +150,29 @@ export function updateEnv(hour: number, haze: THREE.Color, hillColor: THREE.Colo
   if (sunUp >= moonUp) {
     env.lightDir.copy(env.sunDir);
     env.lightColor.copy(SUN_LOW).lerp(SUN_HIGH, clamp(sinA * 1.8, 0, 1));
-    env.lightIntensity = 2.6 * sunUp;
+    env.lightIntensity = 2.35 * sunUp;
   } else {
-    env.lightDir.set(env.sunDir.x * -1, -env.sunDir.y, -env.sunDir.z).normalize();
+    env.lightDir.set(env.sunDir.x * -1, Math.max(0.35, -env.sunDir.y), -env.sunDir.z).normalize();
     env.lightColor.copy(MOON);
-    env.lightIntensity = 0.55 * moonUp;
+    env.lightIntensity = 0.9 * moonUp;
+  }
+  // Dusk gap: both sunUp and moonUp near 0 — keep a warm fill so roads don't go black
+  // before streetlights dominate. Soft enough that asphalt won't specular-blow.
+  const duskFill = env.twilight * 0.55;
+  const nightFill = night * 0.42;
+  if (duskFill > env.lightIntensity || nightFill > env.lightIntensity) {
+    env.lightColor.lerp(DUSK, clamp(duskFill * 0.8, 0, 0.65));
+    env.lightIntensity = Math.max(env.lightIntensity, duskFill, nightFill);
+    if (env.lightDir.y < 0.2) env.lightDir.set(-0.25, 0.85, 0.35).normalize();
   }
   env.hemiSky.copy(HEMI_NIGHT).lerp(HEMI_DAY, day).lerp(DUSK, env.twilight * 0.25);
   env.hemiGround.copy(GROUND_NIGHT).lerp(GROUND_DAY, day);
-  env.hemiIntensity = lerp(0.42, 0.95, day);
-  env.ambient = lerp(0.1, 0.12, day);
+  env.hemiIntensity = lerp(0.58, 0.95, day);
+  env.ambient = lerp(0.18, 0.12, day);
+  // Keep dusk fog from washing the whole street white/peach
+  if (env.twilight > 0.35) {
+    env.fog.lerp(NIGHT_HORIZON, (env.twilight - 0.35) * 0.55);
+  }
   nightUniform.value = night;
   return env;
 }

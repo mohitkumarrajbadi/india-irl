@@ -20,6 +20,10 @@ export type SimInput = {
   sprint: boolean;
   jump: boolean;
   interact: boolean;
+  /** Surface / weather grip (1 = dry asphalt). */
+  gripMul?: number;
+  /** Chassis health 0…1 — scales drive force / grip (arcade parity). */
+  health?: number;
   /** One-shot action codes drained each tick. */
   actions: number[];
 };
@@ -39,7 +43,7 @@ export type ChunkCollider = {
   /** Obstacle AABBs: minX,minY,minZ,maxX,maxY,maxZ per box. */
   boxes: Float32Array;
   /**
-   * Road surface trimesh (world space, Y ≈ 0) — aligns with splat / road meshes.
+   * Road surface trimesh (world space; elevated on apron / flyover deck).
    * `roadVerts`: xyz interleaved; `roadIndices`: triangle indices.
    */
   roadVerts?: Float32Array;

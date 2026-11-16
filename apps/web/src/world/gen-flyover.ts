@@ -1,4 +1,4 @@
-/** One elevated arterial flyover — drive under via pillars-only collision. */
+/** One elevated arterial flyover — ramps onto deck; mid-span drive-under at ground. */
 import type { GenBuffers } from "./gen-buffers.ts";
 import type { Flyover } from "./types.ts";
 

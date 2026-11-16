@@ -2,11 +2,13 @@
   color-scheme: dark;
   --ink: #141a12;
   --cream: #f3efe4;
-  --line: rgba(243, 239, 228, 0.18);
+  --line: rgba(243, 239, 228, 0.14);
   --marigold: #e7c56a;
   --chili: #e0623a;
   --teal: #46d6c4;
-  --glass: rgba(18, 24, 16, 0.66);
+  --glass: rgba(12, 16, 11, 0.55);
+  --glass-strong: rgba(10, 14, 10, 0.72);
+  --hud-radius: 12px;
 }
 
 * {

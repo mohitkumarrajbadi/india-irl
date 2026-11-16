@@ -12,7 +12,7 @@ const city = {
 } as unknown as CityData;
 
 const list = anchorsFromCity(city);
-assert(list.length === 2, "two benches");
+assert(list.length === 5, "plaza ring benches");
 const near = nearestAnchor(list[0].x, list[0].z, list);
 assert(near?.id === list[0].id, "nearest self");
 assert(nearestAnchor(500, 500, list) === null, "far");

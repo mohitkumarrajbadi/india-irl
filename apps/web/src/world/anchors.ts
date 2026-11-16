@@ -20,17 +20,22 @@ export function anchorsFromCity(city: CityData): HangoutAnchor[] {
     const yaw = Math.PI / 2;
     const sin = Math.sin(yaw);
     const cos = Math.cos(yaw);
-    // Two benches facing the plaza.
-    for (const side of [-1, 1] as const) {
-      const lx = side * 2.4;
-      const lz = 1.8;
+    // Plaza ring — denser hangout seating for social freeroam.
+    const seats: { lx: number; lz: number; side: number; tag: string }[] = [
+      { lx: -2.4, lz: 1.8, side: -1, tag: "a" },
+      { lx: 2.4, lz: 1.8, side: 1, tag: "b" },
+      { lx: -2.6, lz: -1.6, side: -1, tag: "c" },
+      { lx: 2.6, lz: -1.6, side: 1, tag: "d" },
+      { lx: 0, lz: 3.2, side: 0, tag: "e" },
+    ];
+    for (const s of seats) {
       out.push({
-        id: `${m.spec.id}-bench-${side > 0 ? "a" : "b"}`,
+        id: `${m.spec.id}-bench-${s.tag}`,
         label: `${m.spec.label} bench`,
-        x: m.x + lx * cos + lz * sin,
+        x: m.x + s.lx * cos + s.lz * sin,
         y: 0,
-        z: m.z - lx * sin + lz * cos,
-        yaw: yaw + (side > 0 ? Math.PI : 0),
+        z: m.z - s.lx * sin + s.lz * cos,
+        yaw: yaw + (s.side > 0 ? Math.PI : s.side < 0 ? 0 : Math.PI / 2),
       });
     }
   }

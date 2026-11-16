@@ -1,5 +1,5 @@
 /** XP, levels, streaks, mission completion. */
-import { dayOffset, istDay, loadVibe, saveVibe } from "./vibe-persist";
+import { dayOffset, istDay, loadVibe, saveVibe } from "./vibe-persist.ts";
 import {
   EMPTY_MISSIONS,
   MISSIONS,
@@ -8,7 +8,7 @@ import {
   type LevelInfo,
   type MissionId,
   type VibeState,
-} from "./vibe-types";
+} from "./vibe-types.ts";
 
 /** XP needed to clear a level (into next). Soft curve keeps early wins frequent. */
 export function xpForLevel(level: number): number {

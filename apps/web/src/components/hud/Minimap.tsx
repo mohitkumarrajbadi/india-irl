@@ -51,7 +51,6 @@ export function Minimap({ city }: { city: CityData }) {
         {
           player: { x: live.x, z: live.z, yaw: live.yaw },
           peers,
-          job: null,
         },
         (wx, wz) => ({
           x: el.width / 2 + (atlas.mx(wx) - cx) * screenScale,

@@ -3,7 +3,7 @@
 /** 0 cow, 1 dog, 2 goat. */
 export type AnimalKind = 0 | 1 | 2;
 
-export type AnimalMood = "roam" | "idle" | "graze" | "flee";
+export type AnimalMood = "roam" | "idle" | "graze" | "flee" | "chase";
 
 export type Animal = {
   kind: AnimalKind;

@@ -10,6 +10,8 @@ let nodes: AudioNode[] = [];
 let bedGain: GainNode | null = null;
 let kind = "";
 let distantAcc = 0;
+/** Fixed gap until next distant horn — re-rolled only after a honk (not every frame). */
+let nextHornAt = 5.5;
 
 function stopBed(): void {
   for (const n of nodes) {
@@ -104,14 +106,20 @@ export function setAmbient(next: string, volume = 1): void {
   }
 }
 
+function rollNextHornGap(night: number): number {
+  const base = night > 0.6 ? 14 : 9;
+  return base + Math.random() * (night > 0.6 ? 10 : 8);
+}
+
 export function tickDistantTraffic(night: number, dt: number): void {
   if (isTrafficMuted() || isSpeakerMuted()) return;
   distantAcc += dt;
-  const gap = night > 0.6 ? 8.5 : 4.2;
-  if (distantAcc < gap + Math.random() * 3.5) return;
+  if (distantAcc < nextHornAt) return;
   distantAcc = 0;
+  nextHornAt = rollNextHornGap(night);
+  // Soft, sparse distant character — not street-level spam
   const k = Math.random() < 0.42 ? 1 : Math.random() < 0.68 ? 3 : 2;
-  honk(k, 0.1 + Math.random() * 0.14);
+  honk(k, 0.06 + Math.random() * 0.08);
 }
 
 export function refreshAmbientAfterUnlock(): void {

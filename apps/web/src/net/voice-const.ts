@@ -1,4 +1,5 @@
 /** Proximity voice constants + UI types. */
+import { iceServersFromProcessEnv } from "./voice-ice.ts";
 
 /** Hear / link only within this radius (meters). */
 export const VOICE_RANGE = 28;
@@ -6,7 +7,8 @@ export const VOICE_RANGE2 = VOICE_RANGE * VOICE_RANGE;
 /** Hard cap on simultaneous peer connections. */
 export const VOICE_MAX_LINKS = 6;
 
-export const ICE: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19302" }];
+/** STUN + optional TURN (`NEXT_PUBLIC_TURN_*`). Resolved once at module load. */
+export const ICE: RTCIceServer[] = iceServersFromProcessEnv();
 
 export type VoiceUi = {
   on: boolean;

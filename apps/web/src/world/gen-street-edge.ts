@@ -59,23 +59,23 @@ function placeExtra(g: GenBuffers, b: Block, e: Edge, rot: number, rng: Rng): vo
   const s2 = e.len * between(rng, 0.12, 0.88);
   const id = g.cfg.id;
   let kind: number | null = null;
-  if ((b.kind === "market" || b.kind === "old") && chance(rng, id === "hyderabad" ? 0.38 : 0.28)) {
+  if ((b.kind === "market" || b.kind === "old") && chance(rng, id === "neerabad" ? 0.38 : 0.28)) {
     kind = chance(rng, 0.55) ? 0 : chance(rng, 0.5) ? 1 : 4;
-  } else if ((b.kind === "old" || b.kind === "market") && chance(rng, b.kind === "old" ? (id === "hyderabad" ? 0.35 : 0.22) : 0.06)) {
+  } else if ((b.kind === "old" || b.kind === "market") && chance(rng, b.kind === "old" ? (id === "neerabad" ? 0.35 : 0.22) : 0.06)) {
     kind = 2;
-  } else if ((b.kind === "tech" || b.kind === "cbd") && e.road.arterial && chance(rng, id === "gurugram" ? 0.14 : id === "hyderabad" ? 0.08 : 0.04)) {
+  } else if ((b.kind === "tech" || b.kind === "cbd") && e.road.arterial && chance(rng, id === "udyogabad" ? 0.14 : id === "neerabad" ? 0.08 : 0.04)) {
     kind = 3;
-  } else if (e.road.arterial && chance(rng, id === "bengaluru" ? 0.08 : 0.05)) {
+  } else if (e.road.arterial && chance(rng, id === "novapura" ? 0.08 : 0.05)) {
     kind = 5;
-  } else if (b.kind === "park" && chance(rng, id === "pune" ? 0.22 : 0.1)) {
+  } else if (b.kind === "park" && chance(rng, id === "mandipura" ? 0.22 : 0.1)) {
     kind = 1;
-  } else if (e.road.arterial && chance(rng, id === "bengaluru" || id === "gurugram" ? 0.16 : 0.1)) {
+  } else if (e.road.arterial && chance(rng, id === "novapura" || id === "udyogabad" ? 0.16 : 0.1)) {
     // Speed breakers stay on the carriageway
     kind = 7;
   } else if (
     e.road.arterial &&
     (b.kind === "tech" || b.kind === "market" || b.kind === "cbd") &&
-    chance(rng, id === "gurugram" || id === "hyderabad" ? 0.14 : 0.09)
+    chance(rng, id === "udyogabad" || id === "neerabad" ? 0.14 : 0.09)
   ) {
     kind = 8;
   }

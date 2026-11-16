@@ -12,11 +12,19 @@ export function cellKey(cx: number, cz: number): string {
   return `${cx},${cz}`;
 }
 
-/** Player cell + 8 neighbors. */
-export function neighborhood(cx: number, cz: number): { cx: number; cz: number }[] {
+/**
+ * Moore neighborhood around (cx,cz).
+ * @param ring 0 = single cell, 1 = 3×3 (default), 2 = 5×5
+ */
+export function neighborhood(
+  cx: number,
+  cz: number,
+  ring = 1,
+): { cx: number; cz: number }[] {
+  const r = Math.max(0, Math.min(2, Math.floor(ring)));
   const out: { cx: number; cz: number }[] = [];
-  for (let dz = -1; dz <= 1; dz += 1) {
-    for (let dx = -1; dx <= 1; dx += 1) out.push({ cx: cx + dx, cz: cz + dz });
+  for (let dz = -r; dz <= r; dz += 1) {
+    for (let dx = -r; dx <= r; dx += 1) out.push({ cx: cx + dx, cz: cz + dz });
   }
   return out;
 }

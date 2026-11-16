@@ -14,6 +14,8 @@ export class RaycastVehicleController {
   steer = 0;
   brake = 0;
   handbrake = false;
+  /** Surface / weather multiplier (1 = dry). */
+  gripMul = 1;
   authority = true;
 
   private readonly rapier: typeof RAPIER;
@@ -32,11 +34,18 @@ export class RaycastVehicleController {
     this.wheels = tuning.wheels.map(() => ({ compression: 0, grounded: false, contactY: 0 }));
   }
 
-  setControls(throttle: number, steer: number, brake: number, handbrake: boolean): void {
+  setControls(
+    throttle: number,
+    steer: number,
+    brake: number,
+    handbrake: boolean,
+    gripMul = 1,
+  ): void {
     this.throttle = clamp(throttle, -1, 1);
     this.steer = clamp(steer, -1, 1);
     this.brake = clamp(brake, 0, 1);
     this.handbrake = handbrake;
+    this.gripMul = clamp(gripMul, 0.35, 1.2);
   }
 
   step(dt: number): void {
@@ -60,6 +69,7 @@ export class RaycastVehicleController {
       linvel,
       right,
       dt,
+      gripMul: this.gripMul,
     });
     if (!grounded) return;
     this.applyDrive(forward, right, linvel, dt);
@@ -93,10 +103,11 @@ export class RaycastVehicleController {
     const steerAngle = this.steer * this.tuning.maxSteer;
     const steerFwd = yawVec(forward, steerAngle);
     const along = linvel.x * forward.x + linvel.z * forward.z;
+    const g = this.gripMul;
     const drive =
-      this.throttle * this.tuning.maxForce * dt -
-      Math.sign(along) * this.brake * this.tuning.brakeForce * dt;
-    const hb = this.handbrake ? this.tuning.handbrakeForce * dt : 0;
+      this.throttle * this.tuning.maxForce * g * dt -
+      Math.sign(along) * this.brake * this.tuning.brakeForce * g * dt;
+    const hb = this.handbrake ? this.tuning.handbrakeForce * g * dt : 0;
     this.body.applyImpulse(
       { x: steerFwd.x * drive - right.x * hb * 0.02, y: 0, z: steerFwd.z * drive - right.z * hb * 0.02 },
       true,

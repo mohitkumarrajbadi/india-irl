@@ -44,7 +44,7 @@ export function HudBrand({
 
   return (
     <section className="panel brand">
-      <h1>INDIA IRL</h1>
+      <h1>OMMO</h1>
       <p className="eyebrow">{city.config.name} · {city.config.hubs.slice(0, 2).join(" · ")}</p>
       <div className="vibe-chip">
         <span className="vibe-lv">Lv {vibeInfo.level}</span>

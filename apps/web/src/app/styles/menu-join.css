@@ -88,6 +88,39 @@
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--city-accent) 18%, transparent);
 }
 
+.social-toggles {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 2px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.social-toggles .toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: rgba(255, 250, 240, 0.88);
+}
+
+.social-toggles .toggle-row span {
+  flex: 1;
+}
+
+.social-toggles kbd {
+  font-size: 0.72rem;
+  opacity: 0.55;
+}
+
+.social-toggles .toggle-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  opacity: 0.55;
+}
+
 .city-pick,
 .meets {
   display: grid;

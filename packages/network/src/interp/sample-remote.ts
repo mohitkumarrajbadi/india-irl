@@ -1,12 +1,10 @@
 /** Hermite remote pose sampler (15 Hz snaps → display). */
+import { REMOTE_INTERP_DELAY_MS, REMOTE_MAX_EXTRAPOLATE_MS } from "./defaults.ts";
 import { hermitePose, type PoseSample } from "./hermite.ts";
 
 export type RemoteSnap = { t: number; x: number; z: number; yaw: number; speed: number };
 
 export type RemotePose = { x: number; z: number; yaw: number; speed: number };
-
-const DELAY_MS = 110;
-const MAX_EXTRAPOLATE_MS = 160;
 
 function wrapAngle(a: number): number {
   const t = a % (Math.PI * 2);
@@ -26,7 +24,7 @@ function toSample(s: RemoteSnap, prev: RemoteSnap | null): PoseSample {
 
 export function sampleRemoteHermite(snaps: readonly RemoteSnap[], nowMs: number, out: RemotePose): void {
   if (snaps.length === 0) return;
-  const rt = nowMs - DELAY_MS;
+  const rt = nowMs - REMOTE_INTERP_DELAY_MS;
   const last = snaps[snaps.length - 1];
 
   if (snaps.length === 1 || rt <= snaps[0].t) {
@@ -38,7 +36,7 @@ export function sampleRemoteHermite(snaps: readonly RemoteSnap[], nowMs: number,
     return;
   }
   if (rt >= last.t) {
-    const dt = Math.min(rt - last.t, MAX_EXTRAPOLATE_MS) / 1000;
+    const dt = Math.min(rt - last.t, REMOTE_MAX_EXTRAPOLATE_MS) / 1000;
     out.x = last.x + Math.sin(last.yaw) * last.speed * dt;
     out.z = last.z + Math.cos(last.yaw) * last.speed * dt;
     out.yaw = last.yaw;

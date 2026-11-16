@@ -66,6 +66,7 @@ export function applyActorFrame(
     ctx.vehicle.root.position.set(0, 0, 0);
     ctx.vehicle.root.rotation.y = f.yaw;
     ctx.vehicle.tilt.rotation.z = lod === 0 ? f.roll : 0;
+    ctx.vehicle.setChassisHealth(f.chassisHealth ?? 1);
     const side = f.blinker ?? 0;
     const flash = side !== 0 && Math.floor(now / 350) % 2 === 0;
     ctx.vehicle.setBlinkers(side, flash);

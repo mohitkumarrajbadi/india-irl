@@ -1,6 +1,6 @@
 /**
  * Render / sim budget for a smooth browser experience.
- * Auto picks Low on weak devices and promotes/demotes from measured FPS.
+ * Auto picks Low first and promotes/demotes from measured FPS.
  */
 import {
   QUALITY_PRESETS,
@@ -12,7 +12,9 @@ import {
 export type { QualityId, QualitySettings, QualityState } from "./quality-presets";
 export { QUALITY_PRESETS } from "./quality-presets";
 
-const STORAGE = "india-irl:quality:v1";
+/** v2 — resets prior "High" lock that kept sessions at ~30fps. */
+const STORAGE = "india-irl:quality:v2";
+const LEGACY = "india-irl:quality:v1";
 
 /** Hysteresis so auto mode does not thrash every sample. */
 let lowStreak = 0;
@@ -32,14 +34,14 @@ function weakDevice(): boolean {
 }
 
 export function detectDefaultPreference(): QualityId {
-  // Prefer auto so measured FPS can keep the session near 60
   return "auto";
 }
 
 export function resolveQuality(preference: QualityId, hint?: Exclude<QualityId, "auto">): QualitySettings {
   if (preference === "auto") {
     if (hint) return QUALITY_PRESETS[hint];
-    return QUALITY_PRESETS[weakDevice() ? "low" : "medium"];
+    // Always start low — promote only after solid FPS samples
+    return QUALITY_PRESETS.low;
   }
   return QUALITY_PRESETS[preference];
 }
@@ -48,6 +50,13 @@ export function loadQualityPreference(): QualityId {
   try {
     const raw = localStorage.getItem(STORAGE);
     if (raw === "low" || raw === "medium" || raw === "high" || raw === "auto") return raw;
+    // Migrate v1: locked High/Medium → auto so FPS can recover
+    const legacy = localStorage.getItem(LEGACY);
+    if (legacy) {
+      localStorage.removeItem(LEGACY);
+      if (legacy === "low") return "low";
+      return "auto";
+    }
   } catch {
     /* ignore */
   }
@@ -65,7 +74,7 @@ export function saveQualityPreference(id: QualityId): void {
 /** Mutable singleton read every frame by Atmosphere / Actor / Traffic. */
 export const quality: QualityState = {
   preference: "auto",
-  active: QUALITY_PRESETS.medium,
+  active: QUALITY_PRESETS.low,
 };
 
 export function applyQuality(preference: QualityId, hint?: Exclude<QualityId, "auto">): QualitySettings {
@@ -83,11 +92,28 @@ export function cycleQuality(): QualitySettings {
   return applyQuality(order[(i + 1) % order.length]);
 }
 
-/** Auto mode: demote under ~50fps, promote only when solidly near 60. */
+/**
+ * Auto mode: demote under ~52fps, promote only when solidly near 60.
+ * Locked High/Medium still emergency-demotes the active tier when drowning.
+ */
 export function noteFps(fps: number): void {
-  if (quality.preference !== "auto") return;
+  if (quality.preference !== "auto") {
+    if (fps > 0 && fps < 42 && quality.active.id !== "low") {
+      lowStreak += 1;
+      highStreak = 0;
+      if (lowStreak >= 3) {
+        lowStreak = 0;
+        quality.active =
+          quality.active.id === "high" ? QUALITY_PRESETS.medium : QUALITY_PRESETS.low;
+      }
+    } else {
+      lowStreak = 0;
+    }
+    return;
+  }
+
   const cur = quality.active.id;
-  if (fps > 0 && fps < 50) {
+  if (fps > 0 && fps < 52) {
     lowStreak += 1;
     highStreak = 0;
     if (lowStreak >= 2) {
@@ -98,10 +124,10 @@ export function noteFps(fps: number): void {
   } else if (fps >= 58) {
     highStreak += 1;
     lowStreak = 0;
-    if (highStreak >= 4) {
+    if (highStreak >= 5) {
       highStreak = 0;
+      // Cap auto at medium — high (shadows/AA) is manual-only to avoid Canvas remount thrash
       if (cur === "low") quality.active = QUALITY_PRESETS.medium;
-      else if (cur === "medium" && !weakDevice()) quality.active = QUALITY_PRESETS.high;
     }
   } else {
     lowStreak = 0;
