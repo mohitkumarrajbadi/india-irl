@@ -1,7 +1,10 @@
 /**
  * City weather: clear → haze → drizzle → rain → storm.
  * Wetness lags precipitation so roads stay slick after showers.
+ * Auto shifts are city+hour seeded so peers stay in sync.
  */
+import { hashString, mulberry32 } from "../lib/rng.ts";
+
 export type WeatherId = "clear" | "haze" | "drizzle" | "rain" | "storm";
 
 export type WeatherState = {
@@ -12,7 +15,7 @@ export type WeatherState = {
   wet: number;
   /** Extra fog 0…1. */
   fog: number;
-  /** Cloud cover 0…1 (dims sun). */
+  /** Cloud cover 0…1 (dims sun + sky). */
   cloud: number;
 };
 
@@ -26,6 +29,9 @@ const TARGETS: Record<WeatherId, { rain: number; fog: number; cloud: number }> =
   storm: { rain: 1, fog: 0.7, cloud: 0.92 },
 };
 
+/** Monsoon-prone metros — afternoon showers + morning haze. */
+const MONSOON = new Set(["novapura", "mandipura", "neerabad"]);
+
 export const weather: WeatherState = {
   id: "clear",
   rain: 0,
@@ -35,8 +41,12 @@ export const weather: WeatherState = {
 };
 
 let autoAcc = 0;
+/** Fixed wait until next auto attempt (seconds) — set once, not re-rolled every frame. */
+let autoNext = 55;
 /** Pause auto shifts after a manual cycle (ms timestamp). */
 let autoHoldUntil = 0;
+/** Deterministic step counter for seeded rolls. */
+let autoStep = 0;
 
 export function setWeather(id: WeatherId): WeatherId {
   weather.id = id;
@@ -65,6 +75,67 @@ export function wetDragMul(): number {
   return 1 + weather.wet * 0.35;
 }
 
+/** Reset auto-cycle timers (tests). */
+export function resetWeatherAuto(): void {
+  autoAcc = 0;
+  autoNext = 55;
+  autoHoldUntil = 0;
+  autoStep = 0;
+}
+
+function roll(cityId: string, hour: number, step: number): number {
+  const seed = hashString(`${cityId}|${Math.floor(hour)}|${step}|wx`);
+  return mulberry32(seed)();
+}
+
+function scheduleNext(cityId: string, hour: number, step: number): void {
+  // 40–80 s between attempts; monsoon afternoons check a bit sooner
+  const monsoon = MONSOON.has(cityId);
+  const aft = hour >= 14 && hour <= 19;
+  const base = monsoon && aft ? 38 : 48;
+  autoNext = base + roll(cityId, hour, step) * 32;
+}
+
+/** Pick next id from India-ish diurnal pattern. */
+function pickAutoShift(cityId: string, hour: number, step: number): WeatherId | null {
+  const r = roll(cityId, hour, step + 17);
+  const r2 = roll(cityId, hour, step + 31);
+  const monsoon = MONSOON.has(cityId);
+  const morning = hour >= 6 && hour < 11;
+  const afternoon = hour >= 14 && hour <= 19;
+  const evening = hour >= 19 && hour < 23;
+  const night = hour >= 23 || hour < 6;
+
+  switch (weather.id) {
+    case "clear":
+      if (morning && r < (monsoon ? 0.55 : 0.35)) return "haze";
+      if (afternoon && monsoon && r < 0.62) return r2 < 0.55 ? "drizzle" : "haze";
+      if (afternoon && !monsoon && r < 0.28) return "haze";
+      if (evening && monsoon && r < 0.35) return "drizzle";
+      if (night && r < 0.18) return "haze";
+      return null;
+    case "haze":
+      if (afternoon && monsoon && r < 0.5) return r2 < 0.45 ? "drizzle" : "clear";
+      if (r < 0.55) return "clear";
+      return null;
+    case "drizzle":
+      if (afternoon && monsoon && r < 0.48) return r2 < 0.35 ? "rain" : "drizzle";
+      if (r < 0.4) return "rain";
+      if (r < 0.75) return "clear";
+      return "haze";
+    case "rain":
+      if (monsoon && afternoon && r < 0.35) return "storm";
+      if (r < 0.45) return "drizzle";
+      if (r < 0.7) return "storm";
+      return "haze";
+    case "storm":
+      if (r < 0.65) return "rain";
+      return "drizzle";
+    default:
+      return null;
+  }
+}
+
 /** Advance weather toward targets; optional light auto cycle by city/hour. */
 export function tickWeather(dt: number, hour: number, cityId: string, auto = true): void {
   const t = TARGETS[weather.id];
@@ -78,20 +149,10 @@ export function tickWeather(dt: number, hour: number, cityId: string, auto = tru
 
   if (!auto || performance.now() < autoHoldUntil) return;
   autoAcc += dt;
-  if (autoAcc < 45 + Math.random() * 40) return;
+  if (autoAcc < autoNext) return;
   autoAcc = 0;
-  // Monsoon-ish cities: more afternoon showers
-  const monsoon = cityId === "novapura" || cityId === "mandipura" || cityId === "neerabad";
-  const aft = hour >= 14 && hour <= 19;
-  if (weather.id === "clear" && monsoon && aft && Math.random() < 0.45) {
-    setWeather(Math.random() < 0.55 ? "drizzle" : "haze");
-  } else if (weather.id === "drizzle" && Math.random() < 0.4) {
-    setWeather(Math.random() < 0.5 ? "rain" : "clear");
-  } else if (weather.id === "rain" && Math.random() < 0.5) {
-    setWeather(Math.random() < 0.25 ? "storm" : "drizzle");
-  } else if (weather.id === "storm" && Math.random() < 0.6) {
-    setWeather("rain");
-  } else if (weather.id === "haze" && Math.random() < 0.5) {
-    setWeather("clear");
-  }
+  autoStep += 1;
+  const next = pickAutoShift(cityId, hour, autoStep);
+  scheduleNext(cityId, hour, autoStep);
+  if (next) setWeather(next);
 }

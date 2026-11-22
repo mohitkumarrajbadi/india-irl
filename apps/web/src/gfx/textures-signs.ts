@@ -60,10 +60,11 @@ export function signAtlas(cfg: CityConfig): SignAtlas {
     ctx.lineWidth = 3;
     ctx.strokeRect(x + 4, y + 4, CW - 8, CH - 8);
     let size = 34;
-    ctx.font = `800 ${size}px ui-sans-serif, system-ui, sans-serif`;
+    const fontStack = `"Noto Sans", "Noto Sans Devanagari", "Noto Sans Kannada", "Noto Sans Telugu", "Noto Sans Gurmukhi", "Mukta", ui-sans-serif, system-ui, sans-serif`;
+    ctx.font = `800 ${size}px ${fontStack}`;
     while (ctx.measureText(text).width > CW - 28 && size > 12) {
       size -= 2;
-      ctx.font = `800 ${size}px ui-sans-serif, system-ui, sans-serif`;
+      ctx.font = `800 ${size}px ${fontStack}`;
     }
     ctx.fillStyle = isBoard ? "#7ff0df" : "#fff7e0";
     ctx.textAlign = "center";

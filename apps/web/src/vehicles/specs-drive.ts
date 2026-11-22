@@ -22,6 +22,8 @@ export type DriveInput = {
   health?: number;
   /** Surface grip multiplier (dirt/gravel/wet). */
   gripMul?: number;
+  /** Coast/brake drag multiplier (wet roads). */
+  dragMul?: number;
   /** Forward slope (+ uphill) for gravity assist. */
   grade?: number;
 };
@@ -31,10 +33,11 @@ export function stepDrive(s: DriveState, input: DriveInput, spec: VehicleSpec, d
   const phys = PLAYER_PHYSICS[spec.kind as 1 | 2 | 3];
   const health = Math.max(0.25, Math.min(1, input.health ?? 1));
   const grip = phys.grip * (0.55 + health * 0.45) * Math.max(0.45, input.gripMul ?? 1);
+  const dragMul = Math.max(0.85, Math.min(1.6, input.dragMul ?? 1));
   const gradeMul = 1 - Math.min(0.28, Math.max(0, input.grade ?? 0) * 0.9);
   const top = phys.maxSpeed * (input.boost ? 1.18 : 1) * (0.7 + health * 0.3) * gradeMul;
   const accel = phys.accelForce * (input.boost ? 1.28 : 1) * (0.55 + health * 0.45) * gradeMul;
-  const brake = phys.brakeForce * (0.65 + health * 0.35);
+  const brake = phys.brakeForce * (0.65 + health * 0.35) * (0.85 + dragMul * 0.15);
   const absSpd = Math.abs(s.speed);
 
   if (input.handbrake) {
@@ -51,7 +54,7 @@ export function stepDrive(s: DriveState, input: DriveInput, spec: VehicleSpec, d
     if (s.speed > 0.35) s.speed -= brake * dt;
     else s.speed = Math.max(-spec.reverse, s.speed - accel * 0.5 * dt);
   } else {
-    const drag = (0.42 + absSpd * 0.052) * (2 - grip);
+    const drag = (0.42 + absSpd * 0.052) * (2 - grip) * dragMul;
     s.speed *= Math.exp(-drag * dt);
     if (absSpd < 0.06) s.speed = 0;
   }

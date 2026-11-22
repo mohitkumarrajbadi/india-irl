@@ -20,7 +20,7 @@ import { PLAYER_MASS } from "@/vehicles/mass";
 import { PLAYER_PHYSICS } from "@/vehicles/physics-props";
 import { SPECS, stepDrive } from "@/vehicles/specs";
 import { tyreGripMul } from "@/game/tyre-grip";
-import { wetGripMul } from "@/game/weather";
+import { wetDragMul, wetGripMul } from "@/game/weather";
 import { driveGrade, lateralGrade } from "@/world/terrain-drive";
 import { sampleTerrain } from "@/world/terrain-sample";
 import type { CityData } from "@/world/types";
@@ -69,6 +69,7 @@ export function stepDriveMode(
         handbrake: jump,
         health,
         gripMul,
+        dragMul: wetDragMul(),
         grade,
       },
       spec,

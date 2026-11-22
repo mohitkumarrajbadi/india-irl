@@ -113,6 +113,19 @@ export function makeBuildingMaterial(): THREE.MeshStandardMaterial {
                winEmit += glassCol * (1.0 - uNight) * (style > 0.5 && style < 1.5 ? 0.5 : 0.2);
                if (lit) winEmit = warm * (0.55 + 0.9 * rnd) * (0.08 + 1.5 * uNight);
              }
+             // Flats / shops: monsoon stains, AC boxes, faded paint — less clean abroad glass
+             if (style < 0.5 || style > 1.5) {
+               float stain = h21(vec2(floor(u * 0.35) + seed, floor(v * 0.2)));
+               if (stain > 0.72 && edge > 0.4) {
+                 diffuseColor.rgb *= mix(0.72, 0.9, (stain - 0.72) / 0.28);
+               }
+               // Window AC box under sill
+               if (!inWin && fv > 0.78 && fv < 0.92 && fu > 0.35 && fu < 0.65 && rnd > 0.62 && edge > 0.8) {
+                 diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.55, 0.56, 0.58), 0.85);
+               }
+               // Painted shop band / damp skirt near ground
+               if (v < 1.4) diffuseColor.rgb *= 0.88;
+             }
              diffuseColor.rgb *= 0.9 + 0.1 * smoothstep(0.0, 14.0, v);
            }
          }`,
@@ -123,6 +136,6 @@ export function makeBuildingMaterial(): THREE.MeshStandardMaterial {
          totalEmissiveRadiance += winEmit;`,
       );
   };
-  mat.customProgramCacheKey = () => "india-irl-building";
+  mat.customProgramCacheKey = () => "india-irl-building-desi";
   return mat;
 }

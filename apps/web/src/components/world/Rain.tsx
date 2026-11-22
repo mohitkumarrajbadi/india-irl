@@ -60,9 +60,10 @@ export function Rain() {
       const o = i * 3;
       positions[o + 1]! -= speeds[i]! * (0.7 + rain) * fall;
       positions[o]! -= wind * fall * 0.35;
-      if (positions[o + 1]! < 0) {
+      const floorY = live.y - 1.2;
+      if (positions[o + 1]! < floorY) {
         positions[o]! = (Math.random() - 0.5) * 40;
-        positions[o + 1]! = 16 + Math.random() * 10;
+        positions[o + 1]! = live.y + 14 + Math.random() * 10;
         positions[o + 2]! = (Math.random() - 0.5) * 40;
       }
     }

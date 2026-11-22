@@ -51,6 +51,7 @@ export function Atmosphere({ config }: { config: CityConfig }) {
     const q = quality.active;
     live.hour = e.hour;
     skyMat.uniforms.uTime.value = state.clock.elapsedTime;
+    skyMat.uniforms.uCloud.value = weather.cloud;
 
     if (scene.fog) {
       const fog = scene.fog as THREE.FogExp2;
